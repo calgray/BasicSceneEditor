@@ -5,7 +5,6 @@
 SOURCES = $(wildcard *.cpp)   # $(wildcard *.c)
 HEADERS = $(wildcard *.h)
 TARGETS = $(basename $(SOURCES))
-
 OBJECTS = ../../Common/InitShader.o
 
 uname := $(shell sh -c 'uname -s 2>/dev/null || echo not')
@@ -21,6 +20,8 @@ ifneq (,$(findstring MINGW,$(uname)))
 	LDLIBS= -lassimp -lfreeglut_static -lglew32 -lopengl32 -lgdi32 -lwinmm
 	
 	CXXDEFS= -DFREEGLUT_STATIC -DGLEW_STATIC
+	CXXOUT=
+	
 	# -Wl --subsystem,windows
 endif
 
@@ -41,7 +42,7 @@ default all: $(TARGETS)
 $(TARGETS): $(OBJECTS)
 
 %: %.cpp gnatidread.h
-	$(CXX) $(CXXFLAGS) $@.cpp $(OBJECTS) $(LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $@.cpp $(OBJECTS) $(LDFLAGS) -o $(CXXOUT)$@
 
 %: %.c
 	gcc $(CXXFLAGS) $^ $(LDFLAGS) -o $@
