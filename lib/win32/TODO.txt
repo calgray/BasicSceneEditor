@@ -1,0 +1,1 @@
+call this folder mingw, as these libraries are for mingw
