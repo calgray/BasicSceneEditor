@@ -159,7 +159,9 @@ static mat2 rotZ(float rotSidewaysDeg) {
 }
 
 //static vec2 currXY(float rotSidewaysDeg) { return rotZ(rotSidewaysDeg) * vec2(currRawX(), currRawY()); }
-static vec2 currMouseXYworld(float rotSidewaysDeg) { return rotZ(rotSidewaysDeg) * currMouseXYscreen(mouseX, mouseY); }
+static vec2 currMouseXYworld(float rotSidewaysDeg) {
+  return rotZ(rotSidewaysDeg) * currMouseXYscreen(mouseX, mouseY);
+}
 
 // See the comment about 40 lines above
 static void setToolCallbacks( void(*newLeftCallback)(vec2 transformedMovement), mat2 leftT, 

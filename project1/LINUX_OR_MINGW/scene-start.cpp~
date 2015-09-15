@@ -411,7 +411,8 @@ void display( void ) {
         drawMesh(sceneObjs[i]);
     }
 
-	CheckError();
+		CheckError();
+		
     glutSwapBuffers();
 }
 

@@ -12,6 +12,6 @@ uniform sampler2D texture;
 
 void main()
 {
-  fColor = color * texture2D( texture, texCoord * texScale );
+  fColor = color * texture2D( texture, texCoord * 2.0 * texScale );
   //fColor = 0.1f * vec4(fPosition.zzz, 1);
 }
