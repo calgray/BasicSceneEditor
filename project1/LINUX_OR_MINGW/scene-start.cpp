@@ -162,16 +162,13 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferId[0]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
 
-    // vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
-    glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
+    glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
     glEnableVertexAttribArray( vPosition );
 
-    // vTexCoord is actually 2D - the third dimension is ignored (it's always 0.0)
-    glVertexAttribPointer( vTexCoord, 3, GL_FLOAT, GL_FALSE, 0,
-                           BUFFER_OFFSET(sizeof(float)*3*mesh->mNumVertices) );
+    glVertexAttribPointer(vTexCoord, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 3 * mesh->mNumVertices));
     glEnableVertexAttribArray( vTexCoord );
-    glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0,
-                           BUFFER_OFFSET(sizeof(float)*6*mesh->mNumVertices) );
+	
+    glVertexAttribPointer(vNormal, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 6 * mesh->mNumVertices));
     glEnableVertexAttribArray( vNormal );
     CheckError();
 }
@@ -179,6 +176,9 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
 // --------------------------------------
 
 static void mouseClickOrScroll(int button, int state, int x, int y) {
+  
+	//global defined in gnatidread.h ... (bad practice, should only declare extern variable in header and define variable in source)
+	prevPos = vec2(currMouseXYscreen(x,y));
   
     if(button==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     if(glutGetModifiers()!=GLUT_ACTIVE_SHIFT) activateTool(button);
@@ -369,7 +369,7 @@ void drawMesh(SceneObject sceneObj) {
     mat4 model = Translate(sceneObj.loc) * RotateX(sceneObj.angles[0]) * RotateY(sceneObj.angles[1]) * RotateZ(sceneObj.angles[2]) * Scale(sceneObj.scale);
     
     // Set the model-view matrix for the shaders
-    glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model );
+    glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
 
 
     // Activate the VAO for a mesh, loading if needed.
@@ -617,13 +617,16 @@ void reshape( int width, int height ) {
 		
 	float fov = 90.0;
 	float aspect = (float)width/(float)height;
-	float nearDist = 0.1f;
-	float farDist = 10.0f;
+	float nearDist = 0.001f;
+	float farDist = 100.0f;
 	
 	//float hfov = fov / 2;
 	//float offset = nearDist / tan(hfov);
 		
 	projection = Perspective(fov, aspect, nearDist, farDist);
+	projection[2][3] += 1.0f;
+	
+	//projection = Ortho(-0.2, 0.2, -0.2, 0.2, nearDist, farDist);
 	//projection = Frustum(-offset * aspect, offset * aspect, -offset, offset, nearDist, farDist);
 }
 
@@ -676,16 +679,15 @@ int main( int argc, char* argv[] )
     glutInitWindowSize( windowWidth, windowHeight );
 
     glutInitContextVersion( 3, 1);
-    //glutInitContextProfile( GLUT_CORE_PROFILE );                // May cause issues, sigh, but you
-    glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE ); // should still use only OpenGL 3.2 Core
-    // features.
+    glutInitContextProfile( GLUT_CORE_PROFILE );
+    //glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE );
+	
     glutCreateWindow( "Initialising..." );
 
     glewInit(); // With some old hardware yields GL_INVALID_ENUM, if so use glewExperimental.
     CheckError(); // This bug is explained at: http://www.opengl.org/wiki/OpenGL_Loading_Library
 
     init(); 
-		CheckError();
 
     glutDisplayFunc( display );
     glutKeyboardFunc( keyboard );

@@ -143,12 +143,12 @@ static vec2 currMouseXYscreen(float x, float y) {
 static void doToolUpdateXY(int x, int y) { 
     if(currButton == GLUT_LEFT_BUTTON || currButton == GLUT_MIDDLE_BUTTON) {
 	    vec2 currPos = vec2(currMouseXYscreen(x,y));
-        if(currButton==GLUT_LEFT_BUTTON)		
-			leftCallback(leftTrans * (currPos - prevPos));
-		else
-			middCallback(middTrans * (currPos - prevPos));
+		
+        if(currButton==GLUT_LEFT_BUTTON) leftCallback(leftTrans * (currPos - prevPos));
+		else middCallback(middTrans * (currPos - prevPos));
 			
 		prevPos = currPos;
+		
 		glutPostRedisplay();
 	}
 }
