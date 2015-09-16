@@ -459,6 +459,22 @@ static void adjustBlueBrightness(vec2 bl_br) {
     sceneObjs[toolObj].brightness+=bl_br[1];
 }
 
+static void adjustAmbientShine(vec2 am_sh){
+#ifdef _DEBUG  
+  std::cout << "adjusting ambience(x) shine (y)" << std::endl;
+#endif
+	sceneObjs[toolObj].ambient+=am_sh[0];
+	sceneObjs[toolObj].shine+=am_sh[1];
+}
+
+static void adjustDiffuseSpecular(vec2 df_sp){
+#ifdef _DEBUG  
+  std::cout << "adjusting diffusion(x) specularity(y)" << std::endl;
+#endif
+	sceneObjs[toolObj].diffuse+=df_sp[0];
+	sceneObjs[toolObj].specular+=df_sp[0];
+}
+
 static void lightMenu(int id) {
     deactivateTool();
     if(id == 70) {
@@ -505,7 +521,11 @@ static void materialMenu(int id) {
                          adjustBlueBrightness, mat2(1, 0, 0, 1) );
     }
     // You'll need to fill in the remaining menu items here.                                                
-                                            
+    if(id==20){
+		toolObj = currObject;
+		setToolCallbacks(adjustDiffuseSpecular, mat2(1,0,0,1),
+						 adjustAmbientShine, mat2(1,0,0,1) );
+	}
     else { printf("Error in materialMenu\n"); }
 }
 
