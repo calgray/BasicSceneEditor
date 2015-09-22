@@ -254,7 +254,9 @@ static void adjustLocXZ(vec2 xz) {
 }
 
 static void adjustScaleY(vec2 sy) {
+#ifdef _DEBUG
     std::cout << "object scale (x) PositionY(y)" << std::endl;
+#endif
 	sceneObjs[toolObj].scale+=sy[0];
     sceneObjs[toolObj].loc[1]+=sy[1];
 }
@@ -323,8 +325,10 @@ void init( void ) {
     glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
 
     // Load shaders and use the resulting shader program
-    shaderProgram = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
-
+    //shaderProgram = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
+	//shaderProgram = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
+	shaderProgram = InitShader( "vPhong.glsl", "fPhong.glsl" );
+	
     glUseProgram( shaderProgram ); CheckError();
 
     vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
