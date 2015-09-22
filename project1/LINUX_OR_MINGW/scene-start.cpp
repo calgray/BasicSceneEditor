@@ -39,10 +39,10 @@ vec3 camRotation = vec3(0, 0, 0); //Euler angles
 static float viewDist = 1.5; // Distance from the camera to the centre of the scene
 static float camRotSidewaysDeg=0; // rotates the camera sideways around the centre
 static float camRotUpAndOverDeg=0; // rotates the camera up and over the centre.
-//-----------------------------------------
 
 mat4 projection; // Projection matrix - set in the reshape function
 mat4 view; // View matrix - set in the display function.
+//------------------------------------------
 
 // These are used to set the window title
 char lab[] = "Project1";
@@ -88,7 +88,7 @@ int toolObj = -1;    // The object currently being modified
 
 
 
-//------------------------------------------------------------
+//------ Asset Loading ----------------------------------------------------
 // Loads a texture by number, and binds it for later use.    
 void loadTextureIfNotAlreadyLoaded(int i) {
     if(textures[i] != NULL) return; // The texture is already loaded.
@@ -114,13 +114,10 @@ void loadTextureIfNotAlreadyLoaded(int i) {
 }
 
 
-//------Mesh loading ----------------------------------------------------
-//
 // The following uses the Open Asset Importer library via loadMesh in 
 // gnatidread.h to load models in .x format, including vertex positions, 
 // normals, and texture coordinates.
 // You shouldn't need to modify this - it's called from drawMesh below.
-
 void loadMeshIfNotAlreadyLoaded(int meshNumber) {
 
     if(meshNumber>=numMeshes || meshNumber < 0) {
@@ -128,7 +125,8 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
         exit(1);
     }
 
-    if(meshes[meshNumber] != NULL) return;
+    if(meshes[meshNumber] != NULL)
+        return; // Already loaded
 
     aiMesh* mesh = loadMesh(meshNumber);
     meshes[meshNumber] = mesh;
@@ -140,8 +138,7 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     GLuint buffer[1];
     glGenBuffers( 1, buffer );
     glBindBuffer( GL_ARRAY_BUFFER, buffer[0] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3)*mesh->mNumVertices,
-                  NULL, GL_STATIC_DRAW );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3)*mesh->mNumVertices, NULL, GL_STATIC_DRAW );
 
     int nVerts = mesh->mNumVertices;
     // Next, we load the position and texCoord data in parts.    
@@ -162,44 +159,18 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferId[0]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+    // vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
+    glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
     glEnableVertexAttribArray( vPosition );
 
-    glVertexAttribPointer(vTexCoord, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 3 * mesh->mNumVertices));
+    // vTexCoord is actually 2D - the third dimension is ignored (it's always 0.0)
+    glVertexAttribPointer( vTexCoord, 3, GL_FLOAT, GL_FALSE, 0,
+                           BUFFER_OFFSET(sizeof(float)*3*mesh->mNumVertices) );
     glEnableVertexAttribArray( vTexCoord );
-	
-    glVertexAttribPointer(vNormal, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(float) * 6 * mesh->mNumVertices));
+    glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0,
+                           BUFFER_OFFSET(sizeof(float)*6*mesh->mNumVertices) );
     glEnableVertexAttribArray( vNormal );
     CheckError();
-}
-
-// --------------------------------------
-
-static void mouseClickOrScroll(int button, int state, int x, int y) {
-  
-	//global defined in gnatidread.h ... (bad practice, should only declare extern variable in header and define variable in source)
-	prevPos = vec2(currMouseXYscreen(x,y));
-  
-    if(button==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-    if(glutGetModifiers()!=GLUT_ACTIVE_SHIFT) activateTool(button);
-    else activateTool(GLUT_MIDDLE_BUTTON);
-    
-    else if(button==GLUT_LEFT_BUTTON && state == GLUT_UP) deactivateTool();
-    else if(button==GLUT_MIDDLE_BUTTON && state==GLUT_DOWN) activateTool(button);
-    else if(button==GLUT_MIDDLE_BUTTON && state==GLUT_UP) deactivateTool();
-
-     // scroll up
-    else if (button == 3) viewDist = (viewDist < 0.0 ? viewDist : viewDist*0.8) - 0.05;
-    
-    // scroll down
-    else if(button == 4) viewDist = (viewDist < 0.0 ? viewDist : viewDist*1.25) + 0.05;
-}
-
-// --------------------------------------
-
-static void mousePassiveMotion(int x, int y) {
-    mouseX=x;
-    mouseY=y;
 }
 
 // --------------------------------------
@@ -209,9 +180,49 @@ mat2 camRotZ() {
     return rotZ(-camRotSidewaysDeg) * mat2(10.0, 0, 0, -10.0);
 }
 
-// --------------------------------------
 
-//---- callback functions for doRotate below and later
+//------------Tool Callbacks---------------------
+static void adjustBrightnessY(vec2 by) {
+#ifdef _DEBUG  
+  std::cout << "adjusting brightness(x) position(y)" << std::endl;
+#endif
+    sceneObjs[toolObj].brightness+=by[0];
+    sceneObjs[toolObj].loc[1]+=by[1];
+}
+
+static void adjustRedGreen(vec2 rg) {
+#ifdef _DEBUG  
+  std::cout << "adjusting Red(x) Green(y)" << std::endl;
+#endif
+    sceneObjs[toolObj].rgb[0]+=rg[0];
+    sceneObjs[toolObj].rgb[1]+=rg[1];
+}
+
+static void adjustBlueBrightness(vec2 bl_br) {
+#ifdef _DEBUG  
+  std::cout << "adjusting blue(x) brightness(y)" << std::endl;
+#endif
+    sceneObjs[toolObj].rgb[2]+=bl_br[0];
+    sceneObjs[toolObj].brightness+=bl_br[1];
+}
+
+static void adjustAmbientShine(vec2 am_sh){
+//#ifdef _DEBUG  
+  std::cout << "adjusting ambience(x) shine (y)" << std::endl;
+//#endif
+	sceneObjs[toolObj].ambient+=am_sh[0];
+	sceneObjs[toolObj].shine+=am_sh[1];
+}
+
+static void adjustDiffuseSpecular(vec2 df_sp){
+//#ifdef _DEBUG  
+  std::cout << "adjusting diffusion(x) specularity(y)" << std::endl;
+  std::cout << "[" << sceneObjs[toolObj].diffuse << "," << sceneObjs[toolObj].specular << std::endl;
+//#endif
+	sceneObjs[toolObj].diffuse+=df_sp[0];
+	sceneObjs[toolObj].specular+=df_sp[1];
+}
+
 static void adjustCamrotsideViewdist(vec2 cv) {
 #ifdef _DEBUG
 	std::cout << "adjusting cam yaw(x) dist(y)" << std::endl;
@@ -235,7 +246,9 @@ static void adjustcamSideUp(vec2 su) {
 }
     
 static void adjustLocXZ(vec2 xz) {
+#ifdef _DEBUG
     std::cout << "object positionX(x) positionY(y)" << std::endl;
+#endif
 	sceneObjs[toolObj].loc[0]+=xz[0];
     sceneObjs[toolObj].loc[2]+=xz[1];
 }
@@ -262,15 +275,12 @@ static void adjustAngleZTexscale(vec2 az_ts) {
     sceneObjs[currObject].texScale  += az_ts[1];
 }
 
-
 //------Set the mouse buttons to rotate the camera around the centre of the scene. 
 static void doRotate() {
-    setToolCallbacks(adjustCamrotsideViewdist, mat2(400,0,0,-2),
-                     adjustcamSideUp, mat2(400, 0, 0,-90) );
+    setToolCallbacks(adjustCamrotsideViewdist, mat2(400,0,0,-2), adjustcamSideUp, mat2(400, 0, 0,-90) );
 }
                                      
 //------Add an object to the scene
-
 static void addObject(int id) {
 
     vec2 currPos = currMouseXYworld(camRotSidewaysDeg);
@@ -300,8 +310,8 @@ static void addObject(int id) {
     glutPostRedisplay();
 }
 
-// ------ The init function
 
+//----------- Initialization ---------------------------
 void init( void ) {
     srand ( time(NULL) ); /* initialize random seed - so the starting scene varies */
     aiInit();
@@ -313,7 +323,7 @@ void init( void ) {
     glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
 
     // Load shaders and use the resulting shader program
-    shaderProgram = InitShader( "vStart.glsl", "fStart.glsl" );
+    shaderProgram = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
 
     glUseProgram( shaderProgram ); CheckError();
 
@@ -347,73 +357,6 @@ void init( void ) {
     glClearColor( 0.0, 0.0, 0.0, 1.0 ); /* black background */
 }
 
-//----------------------------------------------------------------------------
-
-void drawMesh(SceneObject sceneObj) {
-
-    // Activate a texture, loading if needed.
-    loadTextureIfNotAlreadyLoaded(sceneObj.texId);
-    glActiveTexture(GL_TEXTURE0 );
-    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj.texId]);
-
-    // Texture 0 is the only texture type in this program, and is for the rgb colour of the
-    // surface but there could be separate types for, e.g., specularity and normals. 
-    glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 );
-    // Set the texture scale for the shaders
-    glUniform1f( glGetUniformLocation( shaderProgram, "texScale"), sceneObj.texScale );
-
-	//sceneObj.loc += 0.01f * vec3(1, 0, 0);
-		
-    // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
-    // in the sceneObj structure (see near the top of the program).
-    mat4 model = Translate(sceneObj.loc) * RotateX(sceneObj.angles[0]) * RotateY(sceneObj.angles[1]) * RotateZ(sceneObj.angles[2]) * Scale(sceneObj.scale);
-    
-    // Set the model-view matrix for the shaders
-    glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
-
-
-    // Activate the VAO for a mesh, loading if needed.
-    loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
-    glBindVertexArray( vaoIDs[sceneObj.meshId] );
-
-    glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL);
-		CheckError();
-}
-
-//----------------------------------------------------------------------------
-
-void display( void ) {
-    numDisplayCalls++;
-
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-		//Set the projection matrix for the shaders
-    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection );
-		
-	//view gets passed via modelview matrix
-	//view = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z) * Translate(-camPosition);
-	view = Translate(0.0, 0.0, -viewDist) * RotateX(camRotUpAndOverDeg) * RotateY(camRotSidewaysDeg);
-    
-	//only uses single point light
-    SceneObject lightObj1 = sceneObjs[1]; 
-    vec4 lightPosition = view * lightObj1.loc;
-    glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), 1, lightPosition);
-
-    for(int i=0; i<nObjects; i++) {
-        SceneObject so = sceneObjs[i];
-
-        vec3 rgb = so.rgb * lightObj1.rgb * so.brightness * lightObj1.brightness * 2.0;
-        glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, so.ambient * rgb );
-        glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), 1, so.diffuse * rgb );
-        glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), 1, so.specular * rgb );
-        glUniform1f( glGetUniformLocation(shaderProgram, "Shininess"), so.shine ); 
-
-        drawMesh(sceneObjs[i]);
-    }
-
-	CheckError();
-    glutSwapBuffers();
-}
 
 //--------------Menus----------------------
 static void objectMenu(int id) {
@@ -435,57 +378,15 @@ static void groundMenu(int id) {
     glutPostRedisplay();
 }
 
-static void adjustBrightnessY(vec2 by) {
-#ifdef _DEBUG  
-  std::cout << "adjusting brightness(x) position(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].brightness+=by[0];
-    sceneObjs[toolObj].loc[1]+=by[1];
-}
-
-static void adjustRedGreen(vec2 rg) {
-#ifdef _DEBUG  
-  std::cout << "adjusting Red(x) Green(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].rgb[0]+=rg[0];
-    sceneObjs[toolObj].rgb[1]+=rg[1];
-}
-
-static void adjustBlueBrightness(vec2 bl_br) {
-#ifdef _DEBUG  
-  std::cout << "adjusting blue(x) brightness(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].rgb[2]+=bl_br[0];
-    sceneObjs[toolObj].brightness+=bl_br[1];
-}
-
-static void adjustAmbientShine(vec2 am_sh){
-#ifdef _DEBUG  
-  std::cout << "adjusting ambience(x) shine (y)" << std::endl;
-#endif
-	sceneObjs[toolObj].ambient+=am_sh[0];
-	sceneObjs[toolObj].shine+=am_sh[1];
-}
-
-static void adjustDiffuseSpecular(vec2 df_sp){
-#ifdef _DEBUG  
-  std::cout << "adjusting diffusion(x) specularity(y)" << std::endl;
-#endif
-	sceneObjs[toolObj].diffuse+=df_sp[0];
-	sceneObjs[toolObj].specular+=df_sp[0];
-}
-
 static void lightMenu(int id) {
     deactivateTool();
     if(id == 70) {
         toolObj = 1;
-        setToolCallbacks(adjustLocXZ, camRotZ(),
-                         adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
+        setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
 
     } else if(id>=71 && id<=74) {
         toolObj = 1;
-        setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0),
-                         adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+        setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
     }
 
     else { printf("Error in lightMenu\n");
@@ -523,8 +424,7 @@ static void materialMenu(int id) {
     // You'll need to fill in the remaining menu items here.                                                
     if(id==20){
 		toolObj = currObject;
-		setToolCallbacks(adjustDiffuseSpecular, mat2(1,0,0,1),
-						 adjustAmbientShine, mat2(1,0,0,1) );
+		setToolCallbacks(adjustDiffuseSpecular, mat2(1,0,0,1), adjustAmbientShine, mat2(1,0,0,1) );
 	}
     else { printf("Error in materialMenu\n"); }
 }
@@ -550,7 +450,7 @@ static void makeMenu() {
 
     int materialMenuId = glutCreateMenu(materialMenu);
     glutAddMenuEntry("R/G/B/All",10);
-    glutAddMenuEntry("UNIMPLEMENTED: Ambient/Diffuse/Specular/Shine",20);
+    glutAddMenuEntry("Ambient/Diffuse/Specular/Shine",20);
 
     int texMenuId = createArrayMenu(numTextures, textureMenuEntries, texMenu);
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
@@ -574,13 +474,36 @@ static void makeMenu() {
     glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
-//----------------------------------------------------------------------------
 
-void keyboard( unsigned char key, int x, int y )
-{
+//------------Input------------------------------------------
+static void mouseClickOrScroll(int button, int state, int x, int y) {
+  
+	//global defined in gnatidread.h ... (bad practice, should only declare extern variable in header and define variable in source)
+	prevPos = vec2(currMouseXYscreen(x,y));
+  
+    if(button==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+    if(glutGetModifiers()!=GLUT_ACTIVE_SHIFT) activateTool(button);
+    else activateTool(GLUT_MIDDLE_BUTTON);
+    
+    else if(button==GLUT_LEFT_BUTTON && state == GLUT_UP) deactivateTool();
+    else if(button==GLUT_MIDDLE_BUTTON && state==GLUT_DOWN) activateTool(button);
+    else if(button==GLUT_MIDDLE_BUTTON && state==GLUT_UP) deactivateTool();
+
+     // scroll up
+    else if (button == 3) viewDist = (viewDist < 0.0 ? viewDist : viewDist*0.8) - 0.05;
+    
+    // scroll down
+    else if(button == 4) viewDist = (viewDist < 0.0 ? viewDist : viewDist*1.25) + 0.05;
+}
+
+static void mousePassiveMotion(int x, int y) {
+    mouseX=x;
+    mouseY=y;
+}
+
+void keyboard( unsigned char key, int x, int y ) {
 	float speed = 0.1f;
-  switch ( key )
-	{
+  switch ( key ) {
   case 033:
     exit( EXIT_SUCCESS );
     break;
@@ -620,13 +543,78 @@ void keyboard( unsigned char key, int x, int y )
   }
 }
 
-//----------------------------------------------------------------------------
+
+
+//-----------------Draw/Display Callbacks---------------------------------------------------------
+void drawMesh(SceneObject sceneObj) {
+
+    // Activate a texture, loading if needed.
+    loadTextureIfNotAlreadyLoaded(sceneObj.texId);
+    glActiveTexture(GL_TEXTURE0 );
+    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj.texId]);
+
+    // Texture 0 is the only texture type in this program, and is for the rgb colour of the
+    // surface but there could be separate types for, e.g., specularity and normals. 
+    glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 );
+	
+	//sceneObj.loc += 0.01f * vec3(1, 0, 0);
+		
+    // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
+    // in the sceneObj structure (see near the top of the program).
+    mat4 model = Translate(sceneObj.loc) * RotateX(sceneObj.angles[0]) * RotateY(sceneObj.angles[1]) * RotateZ(sceneObj.angles[2]) * Scale(sceneObj.scale);
+    
+    // Set the model-view matrix for the shaders
+    glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
+
+
+    // Activate the VAO for a mesh, loading if needed.
+    loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
+    glBindVertexArray( vaoIDs[sceneObj.meshId] );
+
+    glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL);
+		CheckError();
+}
+
+void display( void ) {
+    numDisplayCalls++;
+
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+		//Set the projection matrix for the shaders
+    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection );
+		
+	//view gets passed via modelview matrix
+	//view = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z) * Translate(-camPosition);
+	view = Translate(0.0, 0.0, -viewDist) * RotateX(camRotUpAndOverDeg) * RotateY(camRotSidewaysDeg);
+    
+	//only uses single point light
+    SceneObject lightObj1 = sceneObjs[1]; 
+    vec4 lightPosition = view * lightObj1.loc;
+    glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), 1, lightPosition);
+
+	
+    for(int i=0; i<nObjects; i++) {
+        SceneObject so = sceneObjs[i];
+
+        vec3 rgb = so.rgb * lightObj1.rgb * so.brightness * lightObj1.brightness * 2.0;
+        glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, so.ambient * rgb );
+        glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), 1, so.diffuse * rgb );
+        glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), 1, so.specular * rgb );
+		
+        glUniform1f( glGetUniformLocation(shaderProgram, "Shininess"), so.shine );
+		
+		glUniform1f( glGetUniformLocation(shaderProgram, "texScale"), so.texScale );
+		
+        drawMesh(sceneObjs[i]);
+    }
+
+	CheckError();
+    glutSwapBuffers();
+}
 
 void idle( void ) {
     glutPostRedisplay();
 }
-
-//----------------------------------------------------------------------------
 
 void reshape( int width, int height ) {
 
@@ -635,7 +623,7 @@ void reshape( int width, int height ) {
 
     glViewport(0, 0, width, height);
 		
-	float fov = 90.0;
+	float fov = 120.0;
 	float aspect = (float)width/(float)height;
 	float nearDist = 0.001f;
 	float farDist = 100.0f;
@@ -644,15 +632,14 @@ void reshape( int width, int height ) {
 	//float offset = nearDist / tan(hfov);
 		
 	projection = Perspective(fov, aspect, nearDist, farDist);
-	projection[2][3] += 1.0f;
+	projection[3][3] = 0.0f;
 	
 	//projection = Ortho(-0.2, 0.2, -0.2, 0.2, nearDist, farDist);
 	//projection = Frustum(-offset * aspect, offset * aspect, -offset, offset, nearDist, farDist);
 }
 
-
-void timer(int unused)
-{
+void timer(int) {
+	
     char title[256];
     sprintf(title, "%s %s: %d Frames Per Second @ %d x %d",
                     lab, programName, numDisplayCalls, windowWidth, windowHeight );
@@ -664,6 +651,7 @@ void timer(int unused)
 }
 
 
+//----------Constants--------------------------------
 char dirDefault1[] = "models-textures";
 char dirDefault3[] = "/tmp/models-textures";
 
@@ -687,7 +675,7 @@ int main( int argc, char* argv[] )
         if(*cpointer == '/' || *cpointer == '\\') programName = cpointer+1;
 
     // Set the models-textures directory, via the first argument or some handy defaults.
-    if(argc > 1)                                         strcpy(dataDir, argv[1]);
+    if(argc > 1) strcpy(dataDir, argv[1]);
     else if(opendir(dirDefault1)) strcpy(dataDir, dirDefault1);
     else if(opendir(dirDefault2)) strcpy(dataDir, dirDefault2);
     else if(opendir(dirDefault3)) strcpy(dataDir, dirDefault3);

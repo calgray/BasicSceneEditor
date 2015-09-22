@@ -1,1 +1,1 @@
-make a resources for shaders and models, and have makefile compile into a bin/linux or bin/mingw folder and copy in the resources
+make a resources folder for shaders and models, and have makefile compile into a bin/linux or bin/mingw folder and copy in the resources

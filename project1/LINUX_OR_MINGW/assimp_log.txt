@@ -1,46 +1,28 @@
-Info,  T5176: Load models-textures/model0.x
-Info,  T5176: Found a matching importer for this file format
-Info,  T5176: Import root directory is 'models-textures\'
-Info,  T5176: Entering post processing pipeline
-Info,  T5176: TriangulateProcess finished. All polygons have been triangulated.
-Info,  T5176: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
-Info,  T5176: CalcTangentsProcess finished. Tangents have been calculated
-Info,  T5176: JoinVerticesProcess finished | Verts in: 324 out: 100 | ~69.1%
-Info,  T5176: Cache relevant are 1 meshes (162 faces). Average output ACMR is 0.796296
-Info,  T5176: Leaving post processing pipeline
-Info,  T5176: Load models-textures/model55.x
-Info,  T5176: Found a matching importer for this file format
-Info,  T5176: Import root directory is 'models-textures\'
-Info,  T5176: Entering post processing pipeline
-Info,  T5176: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
-Info,  T5176: CalcTangentsProcess finished. Tangents have been calculated
-Info,  T5176: JoinVerticesProcess finished | Verts in: 240 out: 76 | ~68.3%
-Info,  T5176: Cache relevant are 1 meshes (80 faces). Average output ACMR is 0.950000
-Info,  T5176: Leaving post processing pipeline
-Info,  T5176: Load models-textures/model41.x
-Info,  T5176: Found a matching importer for this file format
-Info,  T5176: Import root directory is 'models-textures\'
-Info,  T5176: Entering post processing pipeline
-Info,  T5176: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
-Info,  T5176: CalcTangentsProcess finished. Tangents have been calculated
-Info,  T5176: JoinVerticesProcess finished | Verts in: 16488 out: 4485 | ~72.8%
-Info,  T5176: Cache relevant are 1 meshes (5496 faces). Average output ACMR is 0.964884
-Info,  T5176: Leaving post processing pipeline
-Info,  T5176: Load models-textures/model13.x
-Info,  T5176: Found a matching importer for this file format
-Info,  T5176: Import root directory is 'models-textures\'
-Info,  T5176: Entering post processing pipeline
-Info,  T5176: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
-Info,  T5176: CalcTangentsProcess finished. Tangents have been calculated
-Info,  T5176: JoinVerticesProcess finished | Verts in: 17397 out: 5049 | ~71.0%
-Info,  T5176: Cache relevant are 1 meshes (5799 faces). Average output ACMR is 0.989998
-Info,  T5176: Leaving post processing pipeline
-Info,  T5176: Load models-textures/model18.x
-Info,  T5176: Found a matching importer for this file format
-Info,  T5176: Import root directory is 'models-textures\'
-Info,  T5176: Entering post processing pipeline
-Info,  T5176: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
-Info,  T5176: CalcTangentsProcess finished. Tangents have been calculated
-Info,  T5176: JoinVerticesProcess finished | Verts in: 15600 out: 4271 | ~72.6%
-Info,  T5176: Cache relevant are 1 meshes (5200 faces). Average output ACMR is 0.955962
-Info,  T5176: Leaving post processing pipeline
+Info,  T4428: Load models-textures/model0.x
+Info,  T4428: Found a matching importer for this file format
+Info,  T4428: Import root directory is 'models-textures\'
+Info,  T4428: Entering post processing pipeline
+Info,  T4428: TriangulateProcess finished. All polygons have been triangulated.
+Info,  T4428: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
+Info,  T4428: CalcTangentsProcess finished. Tangents have been calculated
+Info,  T4428: JoinVerticesProcess finished | Verts in: 324 out: 100 | ~69.1%
+Info,  T4428: Cache relevant are 1 meshes (162 faces). Average output ACMR is 0.796296
+Info,  T4428: Leaving post processing pipeline
+Info,  T4428: Load models-textures/model55.x
+Info,  T4428: Found a matching importer for this file format
+Info,  T4428: Import root directory is 'models-textures\'
+Info,  T4428: Entering post processing pipeline
+Info,  T4428: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
+Info,  T4428: CalcTangentsProcess finished. Tangents have been calculated
+Info,  T4428: JoinVerticesProcess finished | Verts in: 240 out: 76 | ~68.3%
+Info,  T4428: Cache relevant are 1 meshes (80 faces). Average output ACMR is 0.950000
+Info,  T4428: Leaving post processing pipeline
+Info,  T4428: Load models-textures/model33.x
+Info,  T4428: Found a matching importer for this file format
+Info,  T4428: Import root directory is 'models-textures\'
+Info,  T4428: Entering post processing pipeline
+Info,  T4428: Points: 0, Lines: 0, Triangles: 1, Polygons: 0 (Meshes, X = removed)
+Info,  T4428: CalcTangentsProcess finished. Tangents have been calculated
+Info,  T4428: JoinVerticesProcess finished | Verts in: 11991 out: 4608 | ~61.6%
+Info,  T4428: Cache relevant are 1 meshes (3997 faces). Average output ACMR is 1.277458
+Info,  T4428: Leaving post processing pipeline

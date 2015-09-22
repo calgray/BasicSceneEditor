@@ -1,39 +1,41 @@
 #! /usr/bin/make
 
-.NULL: .exe
-
-SOURCES = $(wildcard *.cpp) #$(wildcard *.c)
-HEADERS = $(wildcard *.h)
-TARGETS = $(basename $(SOURCES))
-OBJECTS = ../../Common/InitShader.o
-
-uname := $(shell sh -c uname)
 #uname := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+uname := $(shell sh -c uname)
 
 CXXOPTS= -Wall -O3 -g
-CXXDEFS= -D_DEBUG
+CXXDEFS=
 CXXINCS= -I../../include
 
 # Linux
 ifneq (,$(findstring Linux,$(uname)))
-	LDLIBS = -lglut -lGL -lXmu -lX11  -lm
-	LDDIRS = -L../../lib/linux
-	LDLIBS = -lassimp -lGLEW -lglut -lGL -lXmu -lX11  -lm -Wl,-rpath,. #-rpath,../../lib/linux
+	LDLIBS= -lglut -lGL -lXmu -lX11  -lm
+	LDDIRS= -L../../lib/linux
+	LDLIBS= -lassimp -lGLEW -lglut -lGL -lXmu -lX11  -lm -Wl,-rpath,. #-rpath,../../lib/linux
+	BINDIR= bin/linux/
 endif
 
-# windows MinGW
+#Windows MinGW
 ifneq (,$(findstring MINGW,$(uname)))
 	LDDIRS= -L../../lib/win32
 	LDLIBS= -lassimp -lfreeglut_static -lglew32 -lopengl32 -lgdi32 -lwinmm
-
-	CXXDEFS += -DFREEGLUT_STATIC -DGLEW_STATIC
-	CXXOUT=
 	# -Wl --subsystem,windows
+	CXXDEFS += -DFREEGLUT_STATIC -DGLEW_STATIC
+	BINDIR=
+	#bin/mingw/
 endif
 
-#windows VC
+#Windows VC
 #mac OSX (Darwin)
 
+#-PLATFORM DEPENDANT---------------------------------------------------------------
+
+SOURCES= $(wildcard *.cpp) 
+#$(wildcard *.c)
+HEADERS= $(wildcard *.h)
+#TARGETS = $(basename $(BINDIR)$(SOURCES))
+TARGETS= $(SOURCES:%.cpp=$(BINDIR)%)
+OBJECTS = ../../Common/InitShader.o
 
 CXXFLAGS= $(CXXOPTS) $(CXXDEFS) $(CXXINCS)
 LDFLAGS= $(LDOPTS) $(LDDIRS) $(LDLIBS)
@@ -42,17 +44,18 @@ DIRT = $(wildcard *.o *.i *~ */*~ *.log *.exe)
 
 #-----------------------------------------------------------------------------
 
-.PHONY: Makefile gnatidread.h
+default all: $(BINDIR) $(TARGETS)
 
-default all: $(TARGETS)
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
 $(TARGETS): $(OBJECTS)
 
-%: %.cpp gnatidread.h
-	$(CXX) $(CXXFLAGS) $@.cpp $(OBJECTS) $(LDFLAGS) -o $(CXXOUT)$@
+$(BINDIR)%: %.cpp
+	$(CXX) $(CXXFLAGS) $< $(OBJECTS) $(LDFLAGS) -o $@
 
-%: %.c
-	gcc $(CXXFLAGS) $^ $(LDFLAGS) -o $(CXXOUT)$@
+#$(BINDIR)%: %.c
+#	gcc $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
 clean:
 	$(RM) $(DIRT)
