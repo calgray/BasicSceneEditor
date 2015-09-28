@@ -29,7 +29,7 @@ void main()
 
 
     // Compute terms in the illumination equation
-    vec3 ambient = AmbientProduct + vec3(0.1, 0.1, 0.1);
+    vec3 ambient = AmbientProduct;// + vec3(0.1, 0.1, 0.1);
 
 	//reduce intensity with distance from light
 	float dist = length(Lvec);

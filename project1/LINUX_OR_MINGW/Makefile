@@ -21,8 +21,7 @@ ifneq (,$(findstring MINGW,$(uname)))
 	LDLIBS= -lassimp -lfreeglut_static -lglew32 -lopengl32 -lgdi32 -lwinmm
 	# -Wl --subsystem,windows
 	CXXDEFS += -DFREEGLUT_STATIC -DGLEW_STATIC
-	BINDIR=
-	#bin/mingw/
+	BINDIR= bin/mingw/
 endif
 
 #Windows VC
@@ -32,7 +31,6 @@ endif
 
 SOURCES= $(wildcard *.cpp) 
 #$(wildcard *.c)
-HEADERS= $(wildcard *.h)
 #TARGETS = $(basename $(BINDIR)$(SOURCES))
 TARGETS= $(SOURCES:%.cpp=$(BINDIR)%)
 OBJECTS = ../../Common/InitShader.o

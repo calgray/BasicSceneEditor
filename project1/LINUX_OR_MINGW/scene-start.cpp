@@ -24,14 +24,13 @@ GLint windowHeight=640, windowWidth=960;
 
 
 // IDs for the GLSL program and GLSL variables.
-GLuint shaderProgram;
 GLuint vPosition, vNormal, vTexCoord;
 GLuint projectionU, modelViewU;
 //--------------------------------------------
 
 // Camera ---------------------------
 vec3 camPosition = vec3(0, 0, 2);
-vec3 camRotation = vec3(0, 0, 0); //Euler angles
+vec3 camRotation = vec3(0, 0, 0); //yaw pitch roll
 
 //-Z = up
 
@@ -48,6 +47,11 @@ mat4 view; // View matrix - set in the display function.
 char lab[] = "Project1";
 char *programName = NULL; // Set in main 
 int numDisplayCalls = 0; // Used to calculate the number of frames per second
+
+//----Shaders------------------------
+GLuint programs[3];
+GLuint shaderProgram;
+
 
 // -----Meshes----------------------------------------------------------
 // Uses the type aiMesh from ../../assimp--3.0.1270/include/assimp/mesh.h
@@ -314,7 +318,7 @@ static void addObject(int id) {
 
 
 //----------- Initialization ---------------------------
-void init( void ) {
+void init() {
     srand ( time(NULL) ); /* initialize random seed - so the starting scene varies */
     aiInit();
 
@@ -325,15 +329,16 @@ void init( void ) {
     glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
 
     // Load shaders and use the resulting shader program
-    //shaderProgram = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
-	//shaderProgram = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
-	shaderProgram = InitShader( "vPhong.glsl", "fPhong.glsl" );
+    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
+	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
+	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" );
+	shaderProgram = programs[2];
 	
-    glUseProgram( shaderProgram ); CheckError();
+    glUseProgram(shaderProgram);
 
     vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
-    vNormal = glGetAttribLocation( shaderProgram, "vNormal" ); CheckError();
-    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" ); CheckError();
+    vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
+    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
 
     projectionU = glGetUniformLocation(shaderProgram, "Projection");
     modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
@@ -363,6 +368,14 @@ void init( void ) {
 
 
 //--------------Menus----------------------
+static void shaderMenu(int id) {
+	deactivateTool();
+	std::cout << shaderProgram << std::endl;
+	std::cout << id << std::endl;
+	//shaderProgram = programs[id];
+	//glUseProgram(shaderProgram); CheckError();
+}
+
 static void objectMenu(int id) {
     deactivateTool();
     addObject(id);
@@ -450,6 +463,10 @@ static void mainmenu(int id) {
 }
 
 static void makeMenu() {
+	
+	char shaderMenuEntries[3][128] = { "blinn-gouruad", "blinn-phong", "phong" };
+	int shaderId = createArrayMenu(3, shaderMenuEntries, shaderMenu);
+	
     int objectId = createArrayMenu(numMeshes, objectMenuEntries, objectMenu);
 
     int materialMenuId = glutCreateMenu(materialMenu);
@@ -465,11 +482,12 @@ static void makeMenu() {
     glutAddMenuEntry("Move Light 2",80);
     glutAddMenuEntry("R/G/B/All Light 2",81);
 
-    glutCreateMenu(mainmenu);
+    glutCreateMenu(mainmenu);	
     glutAddMenuEntry("Rotate/Move Camera",50);
     glutAddSubMenu("Add object", objectId);
     glutAddMenuEntry("Position/Scale", 41);
     glutAddMenuEntry("Rotation/Texture Scale", 55);
+		glutAddSubMenu("Shader", shaderId);
     glutAddSubMenu("Material", materialMenuId);
     glutAddSubMenu("Texture",texMenuId);
     glutAddSubMenu("Ground Texture",groundMenuId);
@@ -551,15 +569,14 @@ void keyboard( unsigned char key, int x, int y ) {
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
 void drawMesh(SceneObject sceneObj) {
-
     // Activate a texture, loading if needed.
-    loadTextureIfNotAlreadyLoaded(sceneObj.texId);
-    glActiveTexture(GL_TEXTURE0 );
-    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj.texId]);
+    loadTextureIfNotAlreadyLoaded(sceneObj.texId); CheckError();
+    glActiveTexture(GL_TEXTURE0 ); CheckError();
+    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj.texId]); CheckError();
 
     // Texture 0 is the only texture type in this program, and is for the rgb colour of the
     // surface but there could be separate types for, e.g., specularity and normals. 
-    glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 );
+    glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 ); CheckError();
 	
 	//sceneObj.loc += 0.01f * vec3(1, 0, 0);
 		
@@ -575,8 +592,7 @@ void drawMesh(SceneObject sceneObj) {
     loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
     glBindVertexArray( vaoIDs[sceneObj.meshId] );
 
-    glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL);
-		CheckError();
+    glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL); CheckError();
 }
 
 void display( void ) {
@@ -585,16 +601,16 @@ void display( void ) {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 		//Set the projection matrix for the shaders
-    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection );
+    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
 		
 	//view gets passed via modelview matrix
 	//view = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * RotateX(camRotUpAndOverDeg) * RotateY(camRotSidewaysDeg);
     
-	//only uses single point light
+	//only uses single point light, bound as object 1
     SceneObject lightObj1 = sceneObjs[1]; 
     vec4 lightPosition = view * lightObj1.loc;
-    glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), 1, lightPosition);
+    glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), 1, lightPosition); CheckError();
 
 	
     for(int i=0; i<nObjects; i++) {
@@ -657,7 +673,7 @@ void timer(int) {
 
 //----------Constants--------------------------------
 char dirDefault1[] = "models-textures";
-char dirDefault3[] = "/tmp/models-textures";
+char dirDefault3[] = "./res/models-textures";
 
 char dirDefault4[] = "/d/models-textures";
 char dirDefault2[] = "/cslinux/examples/CITS3003/project-files/models-textures";
