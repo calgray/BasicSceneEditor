@@ -8,8 +8,6 @@
 //passing MV and P to shader
 //Lighting is gonna be done in view space, but no biggy (better for SSAO i think)
 //Previous rotation system is a mess (and focus always 0,0,0), redoing using cam pos, rot (maybe camFocus, dist, rot)
-//Check how blender handles cam focus (panning and scroll move focus)
-
 
 #include "bitmap.h"
 #include "bitmap.c"
@@ -29,15 +27,14 @@ GLuint projectionU, modelViewU;
 //--------------------------------------------
 
 // Camera ---------------------------
-vec3 camPosition = vec3(0, 0, 2);
+vec3 camPosition = vec3(0, 0, 0);
 vec3 camRotation = vec3(0, 0, 0); //yaw pitch roll
 
 //-Z = up
 
 // Camera locked to centre scene
 static float viewDist = 1.5; // Distance from the camera to the centre of the scene
-static float camRotSidewaysDeg=0; // rotates the camera sideways around the centre
-static float camRotUpAndOverDeg=0; // rotates the camera up and over the centre.
+
 
 mat4 projection; // Projection matrix - set in the reshape function
 mat4 view; // View matrix - set in the display function.
@@ -148,8 +145,11 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     // Next, we load the position and texCoord data in parts.    
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(float)*3*nVerts, mesh->mVertices );
     glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-
+	if(meshNumber != 1) {
+		glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
+	} else {
+		glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
+	}
     // Load the element index data
     GLuint elements[mesh->mNumFaces*3];
     for(GLuint i=0; i < mesh->mNumFaces; i++) {
@@ -181,7 +181,7 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
 
 mat2 camRotZ() {
     std::cout << "cam rot z" << std::endl;
-    return rotZ(-camRotSidewaysDeg) * mat2(10.0, 0, 0, -10.0);
+    return rotZ(-camRotation.x) * mat2(10.0, 0, 0, -10.0);
 }
 
 
@@ -232,7 +232,7 @@ static void adjustCamrotsideViewdist(vec2 cv) {
 	std::cout << "adjusting cam yaw(x) dist(y)" << std::endl;
 	//std::cout << cv << std::endl;
 #endif
-	camRotSidewaysDeg += cv[0];
+	camRotation.x += cv[0];
     viewDist += cv[1];
     //camPosition += vec3(cv, 0) / 1000;
 }
@@ -242,11 +242,11 @@ static void adjustcamSideUp(vec2 su) {
 	std::cout << "adjusting cam yaw(x) pitch(y)" << std::endl;
 #endif
 
-	camPosition += vec3(su.x ,0, su.y);
+	//camPosition += vec3(su.x ,0, su.y);
 		//cam yaw
-    camRotSidewaysDeg += su[0]; 
+    camRotation.x += su[0]; 
 	//cam pitch
-	camRotUpAndOverDeg += su[1];
+	camRotation.y += su[1];
 }
     
 static void adjustLocXZ(vec2 xz) {
@@ -289,7 +289,7 @@ static void doRotate() {
 //------Add an object to the scene
 static void addObject(int id) {
 
-    vec2 currPos = currMouseXYworld(camRotSidewaysDeg);
+    vec2 currPos = currMouseXYworld(camRotation.x);
     sceneObjs[nObjects].loc[0] = currPos[0];
     sceneObjs[nObjects].loc[1] = 0.0;
     sceneObjs[nObjects].loc[2] = currPos[1];
@@ -605,7 +605,10 @@ void display( void ) {
 		
 	//view gets passed via modelview matrix
 	//view = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z) * Translate(-camPosition);
-	view = Translate(0.0, 0.0, -viewDist) * RotateX(camRotUpAndOverDeg) * RotateY(camRotSidewaysDeg);
+	view = Translate(0.0, 0.0, -viewDist) * 
+			RotateX(camRotation.y) * 
+			RotateY(camRotation.x)*
+			Translate(camPosition);
     
 	//only uses single point light, bound as object 1
     SceneObject lightObj1 = sceneObjs[1]; 
@@ -648,14 +651,27 @@ void reshape( int width, int height ) {
 	float nearDist = 0.001f;
 	float farDist = 100.0f;
 	
-	//float hfov = fov / 2;
-	//float offset = nearDist / tan(hfov);
-		
-	projection = Perspective(fov, aspect, nearDist, farDist);
-	projection[3][3] = 0.0f;
+	//projection = Perspective(fov, aspect, nearDist, farDist);
 	
-	//projection = Ortho(-0.2, 0.2, -0.2, 0.2, nearDist, farDist);
-	//projection = Frustum(-offset * aspect, offset * aspect, -offset, offset, nearDist, farDist);
+	GLfloat top;
+	GLfloat right;
+	
+	if(aspect > 1.0f) {
+		top = tan(fov*DegreesToRadians/2) * nearDist;
+		right = top * aspect;
+	}
+	else {
+		right = tan(fov*DegreesToRadians/2) * nearDist;
+		top = right / aspect;
+	}
+	
+	projection = mat4();
+	projection[0][0] = nearDist/right;
+	projection[1][1] = nearDist/top;
+	projection[2][2] = -(farDist + nearDist)/(farDist - nearDist);
+	projection[2][3] = -2.0f * farDist * nearDist/(farDist - nearDist);
+	projection[3][2] = -1.0f;
+	projection[3][3] = 0.0f;
 }
 
 void timer(int) {

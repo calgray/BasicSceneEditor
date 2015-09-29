@@ -33,10 +33,10 @@ void main()
 
 	//reduce intensity with distance from light
 	float dist = length(Lvec);
-	float attenuation = 1.0f / dist / dist;
+	float attenuation = 1.0f / dist / dist / dist;
 	
     float Kd = max( dot(L, N), 0.0 ) * attenuation;
-    vec3  diffuse = Kd * DiffuseProduct;
+    vec3  diffuse = Kd * DiffuseProduct * 100;
 
     float Ks = pow( max(dot(R, E), 0.0), Shininess ) * attenuation;
     vec3  specular = Ks * SpecularProduct;
