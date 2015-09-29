@@ -144,8 +144,8 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     // Next, we load the position and texCoord data in parts.    
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(float)*3*nVerts, mesh->mVertices );
     glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-
+	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
+	
     // Load the element index data
     GLuint elements[mesh->mNumFaces*3];
     for(GLuint i=0; i < mesh->mNumFaces; i++) {
@@ -627,19 +627,18 @@ void reshape( int width, int height ) {
 
     glViewport(0, 0, width, height);
 		
-	float fov = 120.0;
+	float fov = 120.0; //Vertical fov
 	float aspect = (float)width/(float)height;
 	float nearDist = 0.001f;
 	float farDist = 100.0f;
 	
-	//float hfov = fov / 2;
-	//float offset = nearDist / tan(hfov);
-		
-	projection = Perspective(fov, aspect, nearDist, farDist);
+	if(aspect < 1.0f){
+		//fov gets increased to keep hfov at 120
+	} else{
+		projection = Perspective(fov, aspect, nearDist, farDist);
+	}
 	projection[3][3] = 0.0f;
 	
-	//projection = Ortho(-0.2, 0.2, -0.2, 0.2, nearDist, farDist);
-	//projection = Frustum(-offset * aspect, offset * aspect, -offset, offset, nearDist, farDist);
 }
 
 void timer(int) {

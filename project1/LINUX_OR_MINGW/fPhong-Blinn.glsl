@@ -8,7 +8,7 @@ out vec4 color;
 
 //light
 //viewspace
-uniform vec4 LightPosition;
+uniform vec4 LightPosition[2];
 
 //material
 uniform vec3 AmbientProduct, DiffuseProduct, SpecularProduct;
@@ -18,27 +18,31 @@ uniform sampler2D texture;
 
 void main()
 {
-	// The vector to the light from the vertex    
-    vec3 Lvec = LightPosition.xyz - fPositionMV;
+	vec3 ambient = AmbientProduct + vec3(0.1, 0.1, 0.1);
+	vec3  diffuse = vec3(0, 0, 0);
+	vec3  specular = vec3(0, 0, 0);
 	
-    // Unit direction vectors for Blinn-Phong shading calculation
+	// Unit direction vectors for Blinn-Phong shading calculation
 	vec3 N = normalize(fNormalMV);
-    vec3 L = normalize( Lvec );   		// Direction to the light source
-    vec3 E = normalize( -fPositionMV ); // Direction to the eye/camera
-    vec3 H = normalize( L + E ); 		// Halfway vector
-
-    // Compute terms in the illumination equation
-    vec3 ambient = AmbientProduct + vec3(0.1, 0.1, 0.1);
-
-	//reduce intensity with distance from light
-	float dist = length(Lvec);
-	float attenuation = 1.0f / dist / dist;
+	vec3 E = normalize( -fPositionMV ); // Direction to the eye/camera
 	
-    float Kd = max( dot(L, N), 0.0 ) * attenuation;
-    vec3  diffuse = Kd * DiffuseProduct;
+	for(int i = 0; i < 2; i++){
+		// The vector to the light from the vertex    
+		vec3 Lvec = LightPosition[i].xyz - fPositionMV;
+		
+		// Unit direction vectors for Blinn-Phong shading calculation
+		vec3 L = normalize( Lvec );   		// Direction to the light source
+		vec3 H = normalize( L + E ); 		// Halfway vector
 
-    float Ks = pow( max(dot(N, H), 0.0), Shininess ) * attenuation;
-    vec3  specular = Ks * SpecularProduct;
-	
+		//reduce intensity with distance from light
+		float dist = length(Lvec);
+		float attenuation = 1.0f / dist / dist;
+		
+		float Kd = max( dot(L, N), 0.0 ) * attenuation;
+		vec3  diffuse += Kd * DiffuseProduct;
+
+		float Ks = pow( max(dot(N, H), 0.0), Shininess ) * attenuation;
+		vec3  specular += Ks * SpecularProduct;
+	}	
 	color = texture2D(texture, fTexCoord) * vec4((ambient + diffuse), 1) + vec4(specular, 1);
 }
