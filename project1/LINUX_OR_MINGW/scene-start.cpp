@@ -12,6 +12,7 @@
 #include "bitmap.h"
 #include "bitmap.c"
 
+#include <algorithm>
 #include <stdlib.h>
 #include <dirent.h>
 #include <time.h>
@@ -145,11 +146,7 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     // Next, we load the position and texCoord data in parts.    
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(float)*3*nVerts, mesh->mVertices );
     glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
-	if(meshNumber != 1) {
-		glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-	} else {
-		glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-	}
+	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
     // Load the element index data
     GLuint elements[mesh->mNumFaces*3];
     for(GLuint i=0; i < mesh->mNumFaces; i++) {
@@ -181,7 +178,7 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
 
 mat2 camRotZ() {
     std::cout << "cam rot z" << std::endl;
-    return rotZ(-camRotation.x) * mat2(10.0, 0, 0, -10.0);
+    return rotZ(-camRotation.y) * mat2(10.0, 0, 0, -10.0);
 }
 
 
@@ -232,9 +229,8 @@ static void adjustCamrotsideViewdist(vec2 cv) {
 	std::cout << "adjusting cam yaw(x) dist(y)" << std::endl;
 	//std::cout << cv << std::endl;
 #endif
-	camRotation.x += cv[0];
-    viewDist += cv[1];
-    //camPosition += vec3(cv, 0) / 1000;
+	camRotation.y += cv[0];
+    viewDist = std::max(0.1f, viewDist + cv[1]);
 }
 
 static void adjustcamSideUp(vec2 su) {
@@ -244,9 +240,9 @@ static void adjustcamSideUp(vec2 su) {
 
 	//camPosition += vec3(su.x ,0, su.y);
 		//cam yaw
-    camRotation.x += su[0]; 
+    camRotation.y += su[0]; 
 	//cam pitch
-	camRotation.y += su[1];
+	camRotation.x += su[1];
 }
     
 static void adjustLocXZ(vec2 xz) {
@@ -289,7 +285,7 @@ static void doRotate() {
 //------Add an object to the scene
 static void addObject(int id) {
 
-    vec2 currPos = currMouseXYworld(camRotation.x);
+    vec2 currPos = currMouseXYworld(camRotation.y);
     sceneObjs[nObjects].loc[0] = currPos[0];
     sceneObjs[nObjects].loc[1] = 0.0;
     sceneObjs[nObjects].loc[2] = currPos[1];
@@ -361,6 +357,10 @@ void init() {
     // We need to enable the depth test to discard fragments that
     // are behind previously drawn fragments for the same pixel.
     glEnable( GL_DEPTH_TEST );
+    
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CW);
+    
 	//glEnable(GL_DEPTH_CLAMP);
     doRotate(); // Start in camera rotate mode.
     glClearColor( 0.0, 0.0, 0.0, 1.0 ); /* black background */
@@ -512,10 +512,10 @@ static void mouseClickOrScroll(int button, int state, int x, int y) {
     else if(button==GLUT_MIDDLE_BUTTON && state==GLUT_UP) deactivateTool();
 
      // scroll up
-    else if (button == 3) viewDist = (viewDist < 0.0 ? viewDist : viewDist*0.8) - 0.05;
+    else if (button == 3) viewDist = (viewDist < 0.01 ? viewDist : viewDist*0.8  - 0.05);
     
     // scroll down
-    else if(button == 4) viewDist = (viewDist < 0.0 ? viewDist : viewDist*1.25) + 0.05;
+    else if(button == 4) viewDist = viewDist*1.25  + 0.05;
 }
 
 static void mousePassiveMotion(int x, int y) {
@@ -526,41 +526,40 @@ static void mousePassiveMotion(int x, int y) {
 void keyboard( unsigned char key, int x, int y ) {
 	float speed = 0.1f;
   switch ( key ) {
-  case 033:
-    exit( EXIT_SUCCESS );
-    break;
-	case 'd':
-		camPosition += speed * vec3(cos(camRotation.y * DegreesToRadians),
-									0,
-									sin(camRotation.y * DegreesToRadians));
-		break;
-	case 'a':
-		camPosition -= speed * vec3(cos(camRotation.y * DegreesToRadians),
-									0,
-									sin(camRotation.y * DegreesToRadians));
-		break;
+    case 033:
+      exit( EXIT_SUCCESS );
+      break;
 	case 'w':
-		//make scroll wheel do this
-		camPosition += speed * vec3(cos(camRotation.x * DegreesToRadians) * sin(camRotation.y * DegreesToRadians),
-									-sin(camRotation.x * DegreesToRadians),
-									cos(camRotation.x * DegreesToRadians) * -cos(camRotation.y * DegreesToRadians));
+		camPosition += speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
+									sin(camRotation.x * DegreesToRadians),
+									cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
 		break;
 	case 's':
-		camPosition -= speed * vec3(cos(camRotation.x * DegreesToRadians) * sin(camRotation.y * DegreesToRadians),
-									-sin(camRotation.x * DegreesToRadians),
-									cos(camRotation.x * DegreesToRadians) * -cos(camRotation.y * DegreesToRadians));
+        camPosition -= speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
+                                    sin(camRotation.x * DegreesToRadians),
+                                    cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
 		break;
+     case 'd':
+        camPosition -= speed * vec3(cos(camRotation.y * DegreesToRadians),
+                                    0,
+                                    sin(camRotation.y * DegreesToRadians));
+        break;
+    case 'a':
+        camPosition += speed * vec3(cos(camRotation.y * DegreesToRadians),
+                                    0,
+                                    sin(camRotation.y * DegreesToRadians));
+        break;
 	case 'j':
-		camRotation.y += 1.0f;
-		break;
-	case 'l':
-		camRotation.y -= 1.0f;
-		break;
-	case 'i':
 		camRotation.x += 1.0f;
 		break;
-	case 'k':
+	case 'l':
 		camRotation.x -= 1.0f;
+		break;
+	case 'i':
+		camRotation.y += 1.0f;
+		break;
+	case 'k':
+		camRotation.y -= 1.0f;
 		break;
   }
 }
@@ -604,10 +603,10 @@ void display( void ) {
     glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
 		
 	//view gets passed via modelview matrix
-	//view = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z) * Translate(-camPosition);
+	//view = RotateX(camRotation.y) * RotateY(camRotation.x) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * 
-			RotateX(camRotation.y) * 
-			RotateY(camRotation.x)*
+			RotateX(camRotation.x) * 
+			RotateY(camRotation.y) *
 			Translate(camPosition);
     
 	//only uses single point light, bound as object 1
