@@ -57,6 +57,13 @@ GLuint shaderProgram;
 aiMesh* meshes[numMeshes]; // For each mesh we have a pointer to the mesh to draw
 GLuint vaoIDs[numMeshes]; // and a corresponding VAO ID from glGenVertexArrays
 
+const int GROUND_INDEX = 0;
+const int AMBIENT_INDEX = 1;
+const int LIGHT1_INDEX = 2;
+const int LIGHT2_INDEX = 3;
+
+const int MAX_LIGHTS = 2;
+
 // -----Textures---------------------------------------------------------
 //                                            (numTextures is defined in gnatidread.h)
 texture* textures[numTextures]; // An array of texture pointers - see gnatidread.h
@@ -176,112 +183,85 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
 
 // --------------------------------------
 
-mat2 camRotZ() {
-    std::cout << "cam rot z" << std::endl;
+
+//------------Tool Callbacks---------------------
+inline float clamp(float v, float min, float max) { return v < min ? min : (v > max ? max : v); }
+
+static mat2 camRotZ() {
     return rotZ(-camRotation.y) * mat2(10.0, 0, 0, -10.0);
 }
 
-
-//------------Tool Callbacks---------------------
 static void adjustBrightnessY(vec2 by) {
-#ifdef _DEBUG  
-  std::cout << "adjusting brightness(x) position(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].brightness+=by[0];
-    sceneObjs[toolObj].loc[1]+=by[1];
+    sceneObjs[toolObj].brightness = std::max(0.0f, sceneObjs[toolObj].brightness + by[0]);
+    sceneObjs[toolObj].loc[1] += by[1];
 }
 
 static void adjustRedGreen(vec2 rg) {
-#ifdef _DEBUG  
-  std::cout << "adjusting Red(x) Green(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].rgb[0]+=rg[0];
-    sceneObjs[toolObj].rgb[1]+=rg[1];
+    sceneObjs[toolObj].rgb[0] = std::max(0.0f, sceneObjs[toolObj].rgb[0] + rg[0]);
+    sceneObjs[toolObj].rgb[1] = std::max(0.0f, sceneObjs[toolObj].rgb[1] + rg[1]);
 }
 
 static void adjustBlueBrightness(vec2 bl_br) {
-#ifdef _DEBUG  
-  std::cout << "adjusting blue(x) brightness(y)" << std::endl;
-#endif
-    sceneObjs[toolObj].rgb[2]+=bl_br[0];
-    sceneObjs[toolObj].brightness+=bl_br[1];
+    sceneObjs[toolObj].rgb[2] = std::max(0.0f, sceneObjs[toolObj].rgb[2] + bl_br[0]);
+    sceneObjs[toolObj].brightness = std::max(0.0f, sceneObjs[toolObj].brightness + bl_br[1]);
 }
 
 static void adjustAmbientShine(vec2 am_sh){
-//#ifdef _DEBUG  
-  std::cout << "adjusting ambience(x) shine (y)" << std::endl;
-//#endif
-	sceneObjs[toolObj].ambient+=am_sh[0];
-	sceneObjs[toolObj].shine+=am_sh[1];
+	sceneObjs[toolObj].ambient = std::max(0.0f, sceneObjs[toolObj].ambient + am_sh[0]);
+	sceneObjs[toolObj].shine = std::max(0.0f, sceneObjs[toolObj].shine + am_sh[1]);
 }
 
 static void adjustDiffuseSpecular(vec2 df_sp){
-//#ifdef _DEBUG  
-  std::cout << "adjusting diffusion(x) specularity(y)" << std::endl;
-  std::cout << "[" << sceneObjs[toolObj].diffuse << "," << sceneObjs[toolObj].specular << std::endl;
-//#endif
-	sceneObjs[toolObj].diffuse+=df_sp[0];
-	sceneObjs[toolObj].specular+=df_sp[1];
+	sceneObjs[toolObj].diffuse = std::max(0.0f, sceneObjs[toolObj].diffuse + df_sp[0]);
+	sceneObjs[toolObj].specular = std::max(0.0f, sceneObjs[toolObj].specular + df_sp[1]);
 }
 
 static void adjustCamrotsideViewdist(vec2 cv) {
-#ifdef _DEBUG
-	std::cout << "adjusting cam yaw(x) dist(y)" << std::endl;
-	//std::cout << cv << std::endl;
-#endif
 	camRotation.y += cv[0];
-    viewDist = std::max(0.1f, viewDist + cv[1]);
+    viewDist = std::max(0.0f, viewDist + cv[1]);
 }
 
-static void adjustcamSideUp(vec2 su) {
-#ifdef _DEBUG
-	std::cout << "adjusting cam yaw(x) pitch(y)" << std::endl;
-#endif
-
-	//camPosition += vec3(su.x ,0, su.y);
-		//cam yaw
+static void adjustCamYawPitch(vec2 su) {
+	//cam yaw
     camRotation.y += su[0]; 
 	//cam pitch
 	camRotation.x += su[1];
 }
     
+static void adjustCamXY(vec2 xy) {
+	camPosition += xy[0] * vec3(cos(camRotation.y * DegreesToRadians), 0, sin(camRotation.y * DegreesToRadians));
+	
+	float sinx = sin(camRotation.x * DegreesToRadians);
+	camPosition += xy[1] * vec3(sin(camRotation.y * DegreesToRadians) * sinx,
+									cos(camRotation.x * DegreesToRadians),
+									-cos(camRotation.y * DegreesToRadians) * sinx);
+}
+	
 static void adjustLocXZ(vec2 xz) {
-#ifdef _DEBUG
-    std::cout << "object positionX(x) positionY(y)" << std::endl;
-#endif
 	sceneObjs[toolObj].loc[0]+=xz[0];
     sceneObjs[toolObj].loc[2]+=xz[1];
 }
 
 static void adjustScaleY(vec2 sy) {
-#ifdef _DEBUG
-    std::cout << "object scale (x) PositionY(y)" << std::endl;
-#endif
 	sceneObjs[toolObj].scale+=sy[0];
     sceneObjs[toolObj].loc[1]+=sy[1];
 }
 
 static void adjustAngleYX(vec2 angle_yx) {
-#ifdef _DEBUG  
-  std::cout << "object angleX(x) angleY(y)" << std::endl;
-#endif
     sceneObjs[currObject].angles[1]+=angle_yx[0];
     sceneObjs[currObject].angles[0]+=angle_yx[1];
 }
 
 static void adjustAngleZTexscale(vec2 az_ts) {
-#ifdef _DEBUG  
-  std::cout << "adjusting angleZ(x) Texscale(y)" << std::endl;
-#endif
     sceneObjs[currObject].angles[2] += az_ts[0];
     sceneObjs[currObject].texScale  += az_ts[1];
 }
 
 //------Set the mouse buttons to rotate the camera around the centre of the scene. 
-static void doRotate() {
-    setToolCallbacks(adjustCamrotsideViewdist, mat2(400,0,0,-2), adjustcamSideUp, mat2(400, 0, 0,-90) );
+inline void doRotate() {
+    setToolCallbacks(adjustCamrotsideViewdist, mat2(400,0,0,-2), adjustCamYawPitch, mat2(400, 0, 0,-90) );
 }
-                                     
+
 //------Add an object to the scene
 static void addObject(int id) {
 
@@ -313,66 +293,12 @@ static void addObject(int id) {
 }
 
 
-//----------- Initialization ---------------------------
-void init() {
-    srand ( time(NULL) ); /* initialize random seed - so the starting scene varies */
-    aiInit();
-
-    //        for(int i=0; i<numMeshes; i++)
-    //                meshes[i] = NULL;
-
-    glGenVertexArrays(numMeshes, vaoIDs); CheckError(); // Allocate vertex array objects for meshes
-    glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
-
-    // Load shaders and use the resulting shader program
-    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
-	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
-	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" );
-	shaderProgram = programs[2];
-	
-    glUseProgram(shaderProgram);
-
-    vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
-    vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
-    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
-
-    projectionU = glGetUniformLocation(shaderProgram, "Projection");
-    modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
-
-    // Objects 0, and 1 are the ground and the first light.
-    addObject(0); // Square for the ground
-    sceneObjs[0].loc = vec4(0.0, 0.0, 0.0, 1.0);
-    sceneObjs[0].scale = 10.0;
-    sceneObjs[0].angles[0] = 90.0; // Rotate it.
-    sceneObjs[0].texScale = 5.0; // Repeat the texture.
-
-    addObject(55); // Sphere for the first light
-    sceneObjs[1].loc = vec4(2.0, 1.0, 1.0, 1.0);
-    sceneObjs[1].scale = 0.1;
-    sceneObjs[1].texId = 0; // Plain texture
-    sceneObjs[1].brightness = 0.2; // The light's brightness is 5 times this (below).
-
-    addObject(rand() % numMeshes); // A test mesh
-
-    // We need to enable the depth test to discard fragments that
-    // are behind previously drawn fragments for the same pixel.
-    glEnable( GL_DEPTH_TEST );
-    
-    glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CW);
-    
-	//glEnable(GL_DEPTH_CLAMP);
-    doRotate(); // Start in camera rotate mode.
-    glClearColor( 0.0, 0.0, 0.0, 1.0 ); /* black background */
-}
-
-
 //--------------Menus----------------------
 static void shaderMenu(int id) {
 	deactivateTool();
 	std::cout << shaderProgram << std::endl;
 	std::cout << id << std::endl;
-	//shaderProgram = programs[id];
+	shaderProgram = programs[id];
 	//glUseProgram(shaderProgram); CheckError();
 }
 
@@ -391,24 +317,43 @@ static void texMenu(int id) {
 
 static void groundMenu(int id) {
     deactivateTool();
-    sceneObjs[0].texId = id;
+    sceneObjs[GROUND_INDEX].texId = id;
     glutPostRedisplay();
 }
 
 static void lightMenu(int id) {
     deactivateTool();
-    if(id == 70) {
-        toolObj = 1;
-        setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
-
-    } else if(id>=71 && id<=74) {
-        toolObj = 1;
-        setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
-    }
-
-    else { printf("Error in lightMenu\n");
-        exit(1);
-    }
+	switch(id) {
+		case 60: {
+			toolObj = AMBIENT_INDEX;
+			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+			break;
+		}
+		case 70: {
+			toolObj = LIGHT1_INDEX;
+			setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
+			break;
+		}
+		case 71: {
+			toolObj = LIGHT1_INDEX;
+			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+			break;
+		}
+		case 80: {
+			toolObj = LIGHT2_INDEX;
+			setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
+			break;
+		}
+		case 81: {
+			toolObj = LIGHT2_INDEX;
+			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+			break;
+		}
+		default: {
+			printf("Error in lightMenu\n");
+			exit(1);
+		}
+	}
 }
 
 static int createArrayMenu(int size, const char menuEntries[][128], void(*menuFn)(int)) {
@@ -450,14 +395,14 @@ static void mainmenu(int id) {
     deactivateTool();
     if(id == 41 && currObject>=0) {
         toolObj=currObject;
-        setToolCallbacks(adjustLocXZ, camRotZ(),
-                         adjustScaleY, mat2(0.05, 0, 0, 10) );
+        setToolCallbacks(adjustLocXZ, camRotZ(), adjustScaleY, mat2(0.05, 0, 0, 10) );
     }
     if(id == 50)
         doRotate();
+	if(id == 51)
+		setToolCallbacks(adjustCamXY, mat2(1, 0, 0,1), adjustCamYawPitch, mat2(400,0,0,-90));
     if(id == 55 && currObject>=0) {
-        setToolCallbacks(adjustAngleYX, mat2(400, 0, 0, -400),
-                         adjustAngleZTexscale, mat2(400, 0, 0, 15) );
+        setToolCallbacks(adjustAngleYX, mat2(400, 0, 0, -400), adjustAngleZTexscale, mat2(400, 0, 0, 15) );
     }
     if(id == 99) exit(0);
 }
@@ -477,6 +422,7 @@ static void makeMenu() {
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
 
     int lightMenuId = glutCreateMenu(lightMenu);
+	glutAddMenuEntry("R/G/B/All Ambient Light", 60);
     glutAddMenuEntry("Move Light 1",70);
     glutAddMenuEntry("R/G/B/All Light 1",71);
     glutAddMenuEntry("Move Light 2",80);
@@ -484,10 +430,11 @@ static void makeMenu() {
 
     glutCreateMenu(mainmenu);	
     glutAddMenuEntry("Rotate/Move Camera",50);
+	glutAddMenuEntry("Rotate/Pan Camera", 51);
     glutAddSubMenu("Add object", objectId);
     glutAddMenuEntry("Position/Scale", 41);
     glutAddMenuEntry("Rotation/Texture Scale", 55);
-		glutAddSubMenu("Shader", shaderId);
+	glutAddSubMenu("Shader", shaderId);
     glutAddSubMenu("Material", materialMenuId);
     glutAddSubMenu("Texture",texMenuId);
     glutAddSubMenu("Ground Texture",groundMenuId);
@@ -523,47 +470,105 @@ static void mousePassiveMotion(int x, int y) {
     mouseY=y;
 }
 
-void keyboard( unsigned char key, int x, int y ) {
+void special(int key, int x, int y) {
+	std::cout << (int)key << std::endl;
+}
+
+void keyboard(unsigned char key, int x, int y ) {
 	float speed = 0.1f;
-  switch ( key ) {
-    case 033:
-      exit( EXIT_SUCCESS );
-      break;
+	
+	//std::cout << (int)key << std::endl;
+	
+	switch ( key ) {
+	case 033:
+		exit( EXIT_SUCCESS );
+		break;
 	case 'w':
 		camPosition += speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
 									sin(camRotation.x * DegreesToRadians),
 									cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
 		break;
 	case 's':
-        camPosition -= speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
-                                    sin(camRotation.x * DegreesToRadians),
-                                    cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
+		camPosition -= speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
+									sin(camRotation.x * DegreesToRadians),
+									cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
 		break;
-     case 'd':
-        camPosition -= speed * vec3(cos(camRotation.y * DegreesToRadians),
-                                    0,
-                                    sin(camRotation.y * DegreesToRadians));
-        break;
-    case 'a':
-        camPosition += speed * vec3(cos(camRotation.y * DegreesToRadians),
-                                    0,
-                                    sin(camRotation.y * DegreesToRadians));
-        break;
-	case 'j':
-		camRotation.x += 1.0f;
+	case 'd':
+		camPosition -= speed * vec3(cos(camRotation.y * DegreesToRadians),
+									0,
+									sin(camRotation.y * DegreesToRadians));
 		break;
-	case 'l':
-		camRotation.x -= 1.0f;
+	case 'a':
+		camPosition += speed * vec3(cos(camRotation.y * DegreesToRadians),
+									0,
+									sin(camRotation.y * DegreesToRadians));
 		break;
-	case 'i':
-		camRotation.y += 1.0f;
-		break;
-	case 'k':
-		camRotation.y -= 1.0f;
-		break;
-  }
+	}
 }
 
+
+//----------- Initialization ---------------------------
+void init() {
+    srand ( time(NULL) ); /* initialize random seed - so the starting scene varies */
+    aiInit();
+
+    //        for(int i=0; i<numMeshes; i++)
+    //                meshes[i] = NULL;
+
+    glGenVertexArrays(numMeshes, vaoIDs); CheckError(); // Allocate vertex array objects for meshes
+    glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
+
+    // Load shaders and use the resulting shader program
+    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
+	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
+	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" );
+	shaderProgram = programs[2];
+
+    vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
+    vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
+    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
+
+    projectionU = glGetUniformLocation(shaderProgram, "Projection");
+    modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
+
+    // Objects 0, and 1 are the ground and the first light.
+    addObject(0); // Square for the ground
+    sceneObjs[GROUND_INDEX].loc = vec4(0.0, 0.0, 0.0, 1.0);
+    sceneObjs[GROUND_INDEX].scale = 10.0;
+    sceneObjs[GROUND_INDEX].angles[0] = 90.0; // Rotate it.
+    sceneObjs[GROUND_INDEX].texScale = 5.0; // Repeat the texture.
+
+	addObject(55); //Ambient sphere
+	sceneObjs[AMBIENT_INDEX].loc = vec4(0.0, 1.0, 3.0, 1.0);
+    sceneObjs[AMBIENT_INDEX].scale = 0.1;
+    sceneObjs[AMBIENT_INDEX].texId = 0; // Plain texture
+    sceneObjs[AMBIENT_INDEX].brightness = 0.2; // The light's brightness is 5 times this (below).
+	
+    addObject(55); // Sphere for the first light
+    sceneObjs[LIGHT1_INDEX].loc = vec4(2.0, 1.0, 1.0, 1.0);
+    sceneObjs[LIGHT1_INDEX].scale = 0.1;
+    sceneObjs[LIGHT1_INDEX].texId = 0; // Plain texture
+    sceneObjs[LIGHT1_INDEX].brightness = 10.0; // The light's brightness is 5 times this (below).
+
+	addObject(55); // Sphere for the second light
+    sceneObjs[LIGHT2_INDEX].loc = vec4(-2.0, 1.0, 1.0, 1.0);
+    sceneObjs[LIGHT2_INDEX].scale = 0.1;
+    sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
+    sceneObjs[LIGHT2_INDEX].brightness = 10.0; // The light's brightness is 5 times this (below).
+	
+    addObject(rand() % numMeshes); // A test mesh
+
+    // We need to enable the depth test to discard fragments that
+    // are behind previously drawn fragments for the same pixel.
+    glEnable( GL_DEPTH_TEST );
+    
+    glEnable(GL_CULL_FACE);
+    glFrontFace(GL_CW);
+    
+	//glEnable(GL_DEPTH_CLAMP);
+    doRotate(); // Start in camera rotate mode.
+    glClearColor( 0.0, 0.0, 0.0, 1.0 ); /* black background */
+}
 
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
@@ -597,34 +602,58 @@ void drawMesh(SceneObject sceneObj) {
 void display( void ) {
     numDisplayCalls++;
 
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-		//Set the projection matrix for the shaders
-    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
-		
 	//view gets passed via modelview matrix
 	//view = RotateX(camRotation.y) * RotateY(camRotation.x) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * 
 			RotateX(camRotation.x) * 
 			RotateY(camRotation.y) *
+			RotateZ(camRotation.z) *
 			Translate(camPosition);
-    
-	//only uses single point light, bound as object 1
-    SceneObject lightObj1 = sceneObjs[1]; 
-    vec4 lightPosition = view * lightObj1.loc;
-    glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), 1, lightPosition); CheckError();
+	
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+	glUseProgram(shaderProgram);
+	
+	//Set the projection matrix for the shaders
+    glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
+	
+	
+    vec4 lightPositions[MAX_LIGHTS] = {
+		view * sceneObjs[LIGHT1_INDEX].loc,
+		view * sceneObjs[LIGHT2_INDEX].loc
+    };
+	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions);
+
+	vec3 ambient = sceneObjs[AMBIENT_INDEX].rgb * sceneObjs[AMBIENT_INDEX].brightness;
+    vec3 color[MAX_LIGHTS] = {
+		sceneObjs[LIGHT1_INDEX].rgb * sceneObjs[LIGHT1_INDEX].brightness,
+		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness,
+	};
+	
+	//std::cout << color << std::endl;
 	
     for(int i=0; i<nObjects; i++) {
+		
         SceneObject so = sceneObjs[i];
 
-        vec3 rgb = so.rgb * lightObj1.rgb * so.brightness * lightObj1.brightness * 2.0;
-        glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, so.ambient * rgb );
-        glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), 1, so.diffuse * rgb );
-        glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), 1, so.specular * rgb );
+		vec3 diffuse[MAX_LIGHTS] = { so.diffuse * color[0], so.diffuse * color[1] };
+		vec3 specular[MAX_LIGHTS] = { so.specular * color[0], so.specular * color[1] };
+		
+		switch(i) {
+		case LIGHT1_INDEX: 
+			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[0] * 0.2 );
+			break;
+		case LIGHT2_INDEX: 
+			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[1] * 0.2 );
+			break;
+		default:
+			glUniform3fv(glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, so.ambient * ambient);
+		}
+		
+        glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *diffuse );
+        glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *specular );
 		
         glUniform1f( glGetUniformLocation(shaderProgram, "Shininess"), so.shine );
-		
 		glUniform1f( glGetUniformLocation(shaderProgram, "texScale"), so.texScale );
 		
         drawMesh(sceneObjs[i]);
@@ -645,7 +674,7 @@ void reshape( int width, int height ) {
 
     glViewport(0, 0, width, height);
 		
-	float fov = 120.0;
+	float fov = 60.0;
 	float aspect = (float)width/(float)height;
 	float nearDist = 0.001f;
 	float farDist = 100.0f;
@@ -732,9 +761,10 @@ int main( int argc, char* argv[] )
 
     init(); 
 
-    glutDisplayFunc( display );
-    glutKeyboardFunc( keyboard );
-    glutIdleFunc( idle );
+    glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+	glutSpecialFunc(special);
+    glutIdleFunc(idle);
 
     glutMouseFunc( mouseClickOrScroll );
     glutPassiveMotionFunc(mousePassiveMotion);

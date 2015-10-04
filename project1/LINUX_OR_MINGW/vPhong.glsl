@@ -8,18 +8,11 @@ out vec3 fPositionMV;
 out vec3 fNormalMV;
 out vec2 fTexCoord;
 
-//light
-uniform vec4 LightPosition;
-
 //camera
 uniform mat4 Projection;
 
 //object
 uniform mat4 ModelView;
-
-//material
-uniform vec3 AmbientProduct, DiffuseProduct, SpecularProduct;
-uniform float Shininess;
 
 uniform float texScale;
 
