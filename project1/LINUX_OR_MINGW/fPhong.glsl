@@ -9,7 +9,7 @@ in vec2 fTexCoord;
 out vec4 color;
 
 //light * material
-uniform vec4 LightPosition[2]; //viewspace
+uniform vec4 LightPosition[MAX_LIGHTS]; //viewspace
 uniform vec3 AmbientProduct, DiffuseProduct[MAX_LIGHTS], SpecularProduct[MAX_LIGHTS];
 
 //material
@@ -37,7 +37,7 @@ void main()
 
 		//reduce intensity with distance from light
 		float dist = length(Lvec) + 1.0f;
-		float attenuation = 1.0f / dist / dist / dist;
+		float attenuation = 1.0f / dist / dist;
 		
 		float Kd = max( dot(L, N), 0.0 ) * attenuation;
 		diffuse += Kd * DiffuseProduct[i];

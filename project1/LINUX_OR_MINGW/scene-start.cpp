@@ -29,7 +29,7 @@ GLuint projectionU, modelViewU;
 
 // Camera ---------------------------
 vec3 camPosition = vec3(0, 0, 0);
-vec3 camRotation = vec3(0, 0, 0); //yaw pitch roll
+vec3 camRotation = vec3(40, 0, 0); //pitch yaw roll
 
 //-Z = up
 
@@ -90,11 +90,9 @@ typedef struct {
 const int maxObjects = 1024; // Scenes with more than 1024 objects seem unlikely
 
 SceneObject sceneObjs[maxObjects]; // An array storing the objects currently in the scene.
-int nObjects=0; // How many objects are currenly in the scene.
-int currObject=-1; // The current object
+int nObjects = 0; // How many objects are currenly in the scene.
+int currObject =-1; // The current object
 int toolObj = -1;    // The object currently being modified
-
-
 
 
 //------ Asset Loading ----------------------------------------------------
@@ -206,14 +204,14 @@ static void adjustBlueBrightness(vec2 bl_br) {
     sceneObjs[toolObj].brightness = std::max(0.0f, sceneObjs[toolObj].brightness + bl_br[1]);
 }
 
-static void adjustAmbientShine(vec2 am_sh){
-	sceneObjs[toolObj].ambient = std::max(0.0f, sceneObjs[toolObj].ambient + am_sh[0]);
-	sceneObjs[toolObj].shine = std::max(0.0f, sceneObjs[toolObj].shine + am_sh[1]);
+static void adjustAmbientDiffuse(vec2 ad){
+    sceneObjs[toolObj].ambient = std::max(0.0f, sceneObjs[toolObj].ambient + ad[0]);
+    sceneObjs[toolObj].diffuse = std::max(0.0f, sceneObjs[toolObj].diffuse + ad[1]);
 }
 
-static void adjustDiffuseSpecular(vec2 df_sp){
-	sceneObjs[toolObj].diffuse = std::max(0.0f, sceneObjs[toolObj].diffuse + df_sp[0]);
-	sceneObjs[toolObj].specular = std::max(0.0f, sceneObjs[toolObj].specular + df_sp[1]);
+static void adjustSpecularShine(vec2 ss){
+    sceneObjs[toolObj].specular = std::max(0.0f, sceneObjs[toolObj].specular + ss[0]);
+    sceneObjs[toolObj].shine = std::max(0.0f, sceneObjs[toolObj].shine + ss[1]);
 }
 
 static void adjustCamrotsideViewdist(vec2 cv) {
@@ -222,10 +220,8 @@ static void adjustCamrotsideViewdist(vec2 cv) {
 }
 
 static void adjustCamYawPitch(vec2 su) {
-	//cam yaw
-    camRotation.y += su[0]; 
-	//cam pitch
-	camRotation.x += su[1];
+    camRotation.y += su[0];     //cam yaw
+	camRotation.x += su[1];     //cam pitch
 }
     
 static void adjustCamXY(vec2 xy) {
@@ -296,9 +292,15 @@ static void addObject(int id) {
 //--------------Menus----------------------
 static void shaderMenu(int id) {
 	deactivateTool();
-	std::cout << shaderProgram << std::endl;
-	std::cout << id << std::endl;
-	shaderProgram = programs[id];
+	shaderProgram = programs[id-1];
+    
+    vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
+    vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
+    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
+
+    projectionU = glGetUniformLocation(shaderProgram, "Projection");
+    modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
+    
 	//glUseProgram(shaderProgram); CheckError();
 }
 
@@ -380,13 +382,11 @@ static void materialMenu(int id) {
     if(currObject<0) return;
     if(id==10) {
         toolObj = currObject;
-        setToolCallbacks(adjustRedGreen, mat2(1, 0, 0, 1),
-                         adjustBlueBrightness, mat2(1, 0, 0, 1) );
-    }
-    // You'll need to fill in the remaining menu items here.                                                
-    if(id==20){
+        setToolCallbacks(adjustRedGreen, mat2(1, 0, 0, 1), adjustBlueBrightness, mat2(1, 0, 0, 1) );
+    }                                             
+    else if(id==20){
 		toolObj = currObject;
-		setToolCallbacks(adjustDiffuseSpecular, mat2(1,0,0,1), adjustAmbientShine, mat2(1,0,0,1) );
+		setToolCallbacks(adjustAmbientDiffuse, mat2(1,0,0,1), adjustSpecularShine, mat2(1, 0, 0, 50) );
 	}
     else { printf("Error in materialMenu\n"); }
 }
@@ -519,18 +519,12 @@ void init() {
     glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
 
     // Load shaders and use the resulting shader program
-    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" );
-	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" );
-	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" );
-	shaderProgram = programs[2];
-
-    vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
-    vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
-    vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
-
-    projectionU = glGetUniformLocation(shaderProgram, "Projection");
-    modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
-
+    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" ); CheckError();
+	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" ); CheckError();
+	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" ); CheckError();
+	
+    shaderMenu(3); CheckError();
+    
     // Objects 0, and 1 are the ground and the first light.
     addObject(0); // Square for the ground
     sceneObjs[GROUND_INDEX].loc = vec4(0.0, 0.0, 0.0, 1.0);
@@ -612,7 +606,7 @@ void display( void ) {
 	
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	glUseProgram(shaderProgram);
+	glUseProgram(shaderProgram); CheckError();
 	
 	//Set the projection matrix for the shaders
     glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
@@ -630,35 +624,45 @@ void display( void ) {
 		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness,
 	};
 	
-	//std::cout << color << std::endl;
-	
     for(int i=0; i<nObjects; i++) {
 		
-        SceneObject so = sceneObjs[i];
+        SceneObject& so = sceneObjs[i];
 
-		vec3 diffuse[MAX_LIGHTS] = { so.diffuse * color[0], so.diffuse * color[1] };
+		vec3 diffuse[MAX_LIGHTS] = {
+          so.diffuse * so.rgb * so.brightness * color[0],
+          so.diffuse * so.rgb * so.brightness * color[1]
+        };
 		vec3 specular[MAX_LIGHTS] = { so.specular * color[0], so.specular * color[1] };
-		
+        vec3 zero[MAX_LIGHTS] = { vec3(0,0,0), vec3(0,0,0) };
+        
 		switch(i) {
 		case LIGHT1_INDEX: 
 			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[0] * 0.2 );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
 			break;
 		case LIGHT2_INDEX: 
 			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[1] * 0.2 );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
 			break;
 		default:
 			glUniform3fv(glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, so.ambient * ambient);
+            glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *diffuse );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *specular );
 		}
 		
-        glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *diffuse );
-        glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *specular );
 		
         glUniform1f( glGetUniformLocation(shaderProgram, "Shininess"), so.shine );
 		glUniform1f( glGetUniformLocation(shaderProgram, "texScale"), so.texScale );
 		
+        CheckError();
+        
         drawMesh(sceneObjs[i]);
     }
 
+    glUseProgram(GL_NONE); CheckError();
+    
 	CheckError();
     glutSwapBuffers();
 }
