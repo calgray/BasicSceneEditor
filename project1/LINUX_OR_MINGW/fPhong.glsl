@@ -29,8 +29,15 @@ void main()
 	
 	for(int i = 0; i < MAX_LIGHTS; i++) {
 		// The vector to the light from the vertex    
-		vec3 Lvec = LightPosition[i].xyz - fPositionMV;
-		
+        
+        vec3 Lvec;
+        if(i == 1) {
+            Lvec = LightPosition[i].xyz - fPositionMV;
+        }
+        else {
+          Lvec = LightPosition[i].xyz - fPositionMV;
+        }
+
 		// Unit direction vectors for Phong shading calculation
 		vec3 L = normalize(Lvec);			// Direction to the light source
 		vec3 R = reflect(-L, N);			//Perfect reflector
@@ -38,7 +45,8 @@ void main()
 		//reduce intensity with distance from light
 		float dist = length(Lvec) + 1.0f;
 		float attenuation = 1.0f / dist / dist;
-		
+        if(i == 1) attenuation = 1;
+
 		float Kd = max( dot(L, N), 0.0 ) * attenuation;
 		diffuse += Kd * DiffuseProduct[i];
 
@@ -50,5 +58,6 @@ void main()
 		//} 
 	}
 	
-	color = texture2D(texture, fTexCoord) * vec4((ambient + diffuse), 1) + vec4(specular, 0);
+    color = vec4(diffuse, 1);
+	//color = texture2D(texture, fTexCoord) * vec4((ambient + diffuse), 1) + vec4(specular, 0);
 }

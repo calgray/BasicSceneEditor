@@ -530,6 +530,7 @@ void init() {
     sceneObjs[GROUND_INDEX].loc = vec4(0.0, 0.0, 0.0, 1.0);
     sceneObjs[GROUND_INDEX].scale = 10.0;
     sceneObjs[GROUND_INDEX].angles[0] = 90.0; // Rotate it.
+    sceneObjs[GROUND_INDEX].specular = 0.1;
     sceneObjs[GROUND_INDEX].texScale = 5.0; // Repeat the texture.
 
 	addObject(55); //Ambient sphere
@@ -542,13 +543,13 @@ void init() {
     sceneObjs[LIGHT1_INDEX].loc = vec4(2.0, 1.0, 1.0, 1.0);
     sceneObjs[LIGHT1_INDEX].scale = 0.1;
     sceneObjs[LIGHT1_INDEX].texId = 0; // Plain texture
-    sceneObjs[LIGHT1_INDEX].brightness = 10.0; // The light's brightness is 5 times this (below).
+    sceneObjs[LIGHT1_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
 
 	addObject(55); // Sphere for the second light
     sceneObjs[LIGHT2_INDEX].loc = vec4(-2.0, 1.0, 1.0, 1.0);
     sceneObjs[LIGHT2_INDEX].scale = 0.1;
     sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
-    sceneObjs[LIGHT2_INDEX].brightness = 10.0; // The light's brightness is 5 times this (below).
+    sceneObjs[LIGHT2_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
 	
     addObject(rand() % numMeshes); // A test mesh
 
