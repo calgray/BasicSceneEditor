@@ -66,8 +66,9 @@ const int GROUND_INDEX = 0;
 const int AMBIENT_INDEX = 1;
 const int LIGHT1_INDEX = 2;
 const int LIGHT2_INDEX = 3;
+const int LIGHT3_INDEX = 4;
 
-const int MAX_LIGHTS = 2;
+const int MAX_LIGHTS = 3;
 
 // -----Textures---------------------------------------------------------
 //                                            (numTextures is defined in gnatidread.h)
@@ -393,6 +394,19 @@ static void lightMenu(int id) {
 		case 82: {
 			break;
 		}
+		case 90: {
+			toolObj = LIGHT3_INDEX;
+			setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
+			break;
+		}
+		case 91: {
+			toolObj = LIGHT3_INDEX;
+			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+			break;
+		}
+		case 92: {
+			break;
+		}
 		default: {
 			printf("Error in lightMenu\n");
 			exit(1);
@@ -410,12 +424,32 @@ static void lightTypeMenu(int id) {
 			sceneObjs[LIGHT1_INDEX].type = 1;
 			break;
 		}
+		case 12: {
+			sceneObjs[LIGHT1_INDEX].type = 2;
+			break;
+		}
 		case 20: {
 			sceneObjs[LIGHT2_INDEX].type = 0;
 			break;
 		}
 		case 21: {
 			sceneObjs[LIGHT2_INDEX].type = 1;
+			break;
+		}
+		case 22: {
+			sceneObjs[LIGHT2_INDEX].type = 2;
+			break;
+		}
+		case 30: {
+			sceneObjs[LIGHT3_INDEX].type = 0;
+			break;
+		}
+		case 31: {
+			sceneObjs[LIGHT3_INDEX].type = 1;
+			break;
+		}
+		case 32: {
+			sceneObjs[LIGHT3_INDEX].type = 2;
 			break;
 		}
 	}
@@ -493,10 +527,17 @@ static void makeMenu() {
 	int lightTypeMenuId1 = glutCreateMenu(lightTypeMenu);
 	glutAddMenuEntry("Directional", 10);
 	glutAddMenuEntry("Point", 11);
+	glutAddMenuEntry("Spotlight", 12);
 	
 	int lightTypeMenuId2 = glutCreateMenu(lightTypeMenu);
 	glutAddMenuEntry("Directional", 20);
 	glutAddMenuEntry("Point", 21);
+	glutAddMenuEntry("Spotlight", 22);
+	
+	int lightTypeMenuId3 = glutCreateMenu(lightTypeMenu);
+	glutAddMenuEntry("Directional", 23);
+	glutAddMenuEntry("Point", 31);
+	glutAddMenuEntry("Spotlight", 32);
 	
     int lightMenuId = glutCreateMenu(lightMenu);
 	glutAddMenuEntry("Move Light Ambient", 60);
@@ -507,6 +548,9 @@ static void makeMenu() {
 	glutAddSubMenu("Type Light 2", lightTypeMenuId2);
     glutAddMenuEntry("Move Light 2",80);
     glutAddMenuEntry("R/G/B/All Light 2",81);
+	glutAddSubMenu("Type Light 3", lightTypeMenuId3);
+    glutAddMenuEntry("Move Light 3",90);
+    glutAddMenuEntry("R/G/B/All Light 3",91);
 
     glutCreateMenu(mainmenu);
     glutAddMenuEntry("Rotate/Move Camera",50);
@@ -604,7 +648,14 @@ void init() {
     sceneObjs[LIGHT2_INDEX].scale = 0.1;
     sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT2_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
-	sceneObjs[LIGHT1_INDEX].type = 1;
+	sceneObjs[LIGHT2_INDEX].type = 1;
+	
+	addObject(55); // Sphere for the third light
+    sceneObjs[LIGHT3_INDEX].loc = vec4(0.0, 1.0, 1.0, 1.0);
+    sceneObjs[LIGHT3_INDEX].scale = 0.1;
+    sceneObjs[LIGHT3_INDEX].texId = 0; // Plain texture
+    sceneObjs[LIGHT3_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
+	sceneObjs[LIGHT3_INDEX].type = 2;
 	
     addObject(rand() % numMeshes); // A test mesh
 
@@ -704,14 +755,16 @@ void display( void ) {
 	
 	int lightTypes[MAX_LIGHTS] = {
 		sceneObjs[LIGHT1_INDEX].type,
-		sceneObjs[LIGHT2_INDEX].type
+		sceneObjs[LIGHT2_INDEX].type,
+		sceneObjs[LIGHT3_INDEX].type
 	};
 	glUniform1iv( glGetUniformLocation(shaderProgram, "LightType"), MAX_LIGHTS, lightTypes); CheckError();
 	
 	
     vec4 lightPositions[MAX_LIGHTS] = {
 		view * sceneObjs[LIGHT1_INDEX].loc,
-		view * sceneObjs[LIGHT2_INDEX].loc
+		view * sceneObjs[LIGHT2_INDEX].loc,
+		view * sceneObjs[LIGHT3_INDEX].loc
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
 	
@@ -720,11 +773,13 @@ void display( void ) {
 	
     vec3 color[MAX_LIGHTS] = {
 		sceneObjs[LIGHT1_INDEX].rgb * sceneObjs[LIGHT1_INDEX].brightness,
-		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness
+		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness,
+		sceneObjs[LIGHT3_INDEX].rgb * sceneObjs[LIGHT3_INDEX].brightness
 	};
 	
 	 vec3 zero[MAX_LIGHTS] = {
 		vec3(0,0,0), 
+		vec3(0,0,0),
 		vec3(0,0,0)
 	};
 	
@@ -734,12 +789,14 @@ void display( void ) {
 
 		vec3 diffuse[MAX_LIGHTS] = {
           so.diffuse * so.rgb * so.brightness * color[0],
-          so.diffuse * so.rgb * so.brightness * color[1]
+          so.diffuse * so.rgb * so.brightness * color[1],
+          so.diffuse * so.rgb * so.brightness * color[2]
         };
 		
 		vec3 specular[MAX_LIGHTS] = { 
 			so.specular * color[0], 
-			so.specular * color[1]
+			so.specular * color[1],
+			so.specular * color[2]
 		};
         
 		switch(i) {
@@ -755,6 +812,11 @@ void display( void ) {
 			break;
 		case LIGHT2_INDEX: 
 			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[1] );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
+			break;
+		case LIGHT3_INDEX: 
+			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[2] );
             glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
             glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
 			break;

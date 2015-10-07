@@ -70,6 +70,29 @@ void main()
 			float Ks = pow( max(dot(N, H), 0.0), Shininess * 3 ) * attenuation;
 			specular += Ks * SpecularProduct[i];
         }
+		//Spot Light
+        else if(LightType[i] == 2) {
+			// The vector to the light from the vertex   
+			vec3 Lvec = LightPosition[i].xyz - fPositionMV;
+			
+			//angle between the spotlight centre and the fragment being shaded.
+			float coneAngle = acos(dot(-Lvec, normalize(spotlightDirection)));
+		
+			vec3 L = normalize(Lvec);           // Direction to the light source
+			vec3 H = normalize( L + E );        // Halfway vector
+	
+			//reduce intensity with distance from light and increasing angle
+			float dist = length(Lvec) + 1.0f;
+			float attenuation;
+			if(coneAngle > sLCutoffAngle) attenuation = 0.0f ;
+			else attenuation = 1.0f / dist / dist * atan(coneAtten * coneAngle);
+			
+			float Kd = max( dot(L, N), 0.0 ) * attenuation;
+			diffuse += Kd * DiffuseProduct[i];
+			
+			float Ks = pow( max(dot(N, H), 0.0), Shininess * 3 ) * attenuation;
+			specular += Ks * SpecularProduct[i];
+        }
 	}
 	
 	color = texture2D(texture, fTexCoord) * vec4((ambient + diffuse), 1) + vec4(specular, 0);
