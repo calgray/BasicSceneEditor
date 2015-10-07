@@ -8,12 +8,14 @@ CXXOPTS= -Wall -O3 -g
 CXXDEFS=
 CXXINCS= -I../../include
 
+BINDIR = ./
+
 # Linux
 ifneq (,$(findstring Linux,$(uname)))
 	LDLIBS= -lglut -lGL -lXmu -lX11  -lm
 	LDDIRS= -L../../lib/linux
 	LDLIBS= -lassimp -lGLEW -lglut -lGL -lXmu -lX11  -lm -Wl,-rpath,. #-rpath,../../lib/linux
-	BINDIR= bin/linux/
+	#BINDIR= bin/linux/
 endif
 
 #Windows MinGW
@@ -22,7 +24,7 @@ ifneq (,$(findstring _NT,$(uname)))
 	LDLIBS= -lassimp -lfreeglut_static -lglew32 -lopengl32 -lgdi32 -lwinmm
 	# -Wl --subsystem,windows
 	CXXDEFS += -DFREEGLUT_STATIC -DGLEW_STATIC
-	BINDIR= bin/mingw/
+	#BINDIR= bin/mingw/
 endif
 
 #Windows VC
