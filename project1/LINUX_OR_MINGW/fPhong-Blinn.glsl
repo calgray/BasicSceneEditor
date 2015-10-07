@@ -85,7 +85,7 @@ void main()
 			float dist = length(Lvec) + 1.0f;
 			float attenuation;
 			if(coneAngle > 0.5) attenuation = 0.0f ;
-			else attenuation = 1.0f / dist / dist * atan(0.5 * coneAngle);
+			else attenuation = 1.0f / dist / dist * atan(2 * tan(1) * coneAngle);
 			
 			float Kd = max( dot(L, N), 0.0 ) * attenuation;
 			diffuse += Kd * DiffuseProduct[i];
