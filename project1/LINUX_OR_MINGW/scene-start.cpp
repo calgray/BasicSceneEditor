@@ -395,7 +395,7 @@ static void lightMenu(int id) {
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
-		case 72: {
+		case 82: {
 			toolObj = LIGHT2_INDEX;
 			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
 		}
