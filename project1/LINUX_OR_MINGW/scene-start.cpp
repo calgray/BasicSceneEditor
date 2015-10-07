@@ -604,7 +604,7 @@ void init() {
     sceneObjs[LIGHT2_INDEX].scale = 0.1;
     sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT2_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
-	sceneObjs[LIGHT1_INDEX].type = 1;
+	sceneObjs[LIGHT2_INDEX].type = 1;
 	
     addObject(rand() % numMeshes); // A test mesh
 
