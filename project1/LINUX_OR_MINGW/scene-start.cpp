@@ -48,7 +48,7 @@ int numDisplayCalls = 0; // Used to calculate the number of frames per second
 
 //-------Time---------------------
 int prevTime = 0;
-int deltaTime = 0;
+float deltaTime = 0;
 
 
 //----Shaders------------------------
@@ -88,8 +88,11 @@ typedef struct {
     vec3 rgb;
     float brightness; // Multiplies all colours
 	
-	int type;
-	int path;
+	int type; //light type
+	
+	int path; //path type
+	float speed; //path speed
+	float distance; //path distance
 	
 	//int shaderId;
     int meshId;
@@ -254,13 +257,18 @@ static void adjustScaleY(vec2 sy) {
 }
 
 static void adjustAngleYX(vec2 angle_yx) {
-    sceneObjs[currObject].angles[1]+=angle_yx[0];
-    sceneObjs[currObject].angles[0]+=angle_yx[1];
+    sceneObjs[toolObj].angles[1]+=angle_yx[0];
+    sceneObjs[toolObj].angles[0]+=angle_yx[1];
 }
 
 static void adjustAngleZTexscale(vec2 az_ts) {
-    sceneObjs[currObject].angles[2] += az_ts[0];
-    sceneObjs[currObject].texScale  += az_ts[1];
+    sceneObjs[toolObj].angles[2] += az_ts[0];
+    sceneObjs[toolObj].texScale  += az_ts[1];
+}
+
+static void adjustSpeedDist(vec2 sd) {
+	sceneObjs[toolObj].speed 	+= sd[0];
+    sceneObjs[toolObj].distance += sd[1];
 }
 
 //------Set the mouse buttons to rotate the camera around the centre of the scene. 
@@ -335,7 +343,15 @@ static void groundMenu(int id) {
 
 static void pathMenu(int id) {
 	deactivateTool();
-	sceneObjs[currObject].path = id;
+	if(id < 10) {
+		sceneObjs[currObject].path = id;
+		sceneObjs[currObject].speed = 1.0f;
+		sceneObjs[currObject].distance = 2.0f;
+	}
+	if(id == 10) {
+		toolObj = currObject;
+		setToolCallbacks(adjustSpeedDist, mat2(1, 0, 0, 1), adjustSpeedDist, mat2(1, 0, 0, 1));
+	}
 }
 
 static void lightMenu(int id) {
@@ -469,8 +485,10 @@ static void makeMenu() {
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
 	
 	int pathMenuId = glutCreateMenu(pathMenu);
-	glutAddMenuEntry("Stationary", 10);
-	glutAddMenuEntry("Revolve", 11);
+	glutAddMenuEntry("Speed/Distance", 10);
+	glutAddMenuEntry("Stop", 0);
+	glutAddMenuEntry("Revolve", 1);
+	glutAddMenuEntry("Bounce", 2);
 	
 	int lightTypeMenuId1 = glutCreateMenu(lightTypeMenu);
 	glutAddMenuEntry("Directional", 10);
@@ -565,7 +583,7 @@ void init() {
     sceneObjs[GROUND_INDEX].loc = vec4(0.0, 0.0, 0.0, 1.0);
     sceneObjs[GROUND_INDEX].scale = 10.0;
     sceneObjs[GROUND_INDEX].angles[0] = 90.0; // Rotate it.
-    sceneObjs[GROUND_INDEX].specular = 0.1;
+    sceneObjs[GROUND_INDEX].specular = 0.3;
     sceneObjs[GROUND_INDEX].texScale = 5.0; // Repeat the texture.
 
 	addObject(55); //Ambient sphere
@@ -604,7 +622,25 @@ void init() {
 
 void update()
 {
-	//sceneObjs[currObject].loc = vec4(cos(deltaTime), 0, sin(deltaTime));
+	float time = prevTime/1000.0f;
+	
+	for (int i = 0; i < nObjects; i++)
+	{
+		if(sceneObjs[i].path == 1) {
+			float angle = sceneObjs[i].speed * time;
+			float dist = sceneObjs[i].distance;
+			
+			sceneObjs[i].loc = vec4(dist * -sin(angle), sceneObjs[currObject].loc.y, dist * -cos(angle), 1);
+			sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
+		}
+		if(sceneObjs[i].path == 2) {
+			float angle = sceneObjs[i].speed * time;
+			float dist = sceneObjs[i].distance;
+			
+			sceneObjs[i].loc = vec4(dist * -sin(angle), 0.5f * std::abs(sin(8 * angle)), dist * -cos(angle), 1);
+			sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
+		}
+	}
 }
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
@@ -642,10 +678,11 @@ void drawMesh(SceneObject sceneObj) {
 void display( void ) {
     numDisplayCalls++;
 
+	//Update Time variables
 	int currTime = glutGet(GLUT_ELAPSED_TIME);
-	deltaTime = currTime - prevTime;
+	deltaTime = (currTime - prevTime) / 1000.0f; //in seconds
 	prevTime = currTime;
-	
+	 
 	update();
 	
 	//view gets passed via modelview matrix

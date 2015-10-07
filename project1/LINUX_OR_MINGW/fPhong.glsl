@@ -14,8 +14,6 @@ uniform vec4 Origin; //faster than multiplying an inversetranspose
 //light * material (viewspace)
 uniform int LightType[MAX_LIGHTS];
 uniform vec4 LightPosition[MAX_LIGHTS];
-//uniform vec4 LightDirection[MAX_LIGHTS];
-
 
 
 uniform vec3 AmbientProduct;
@@ -30,15 +28,14 @@ void main()
 {
 	// Compute terms in the illumination equation
     vec3 ambient = AmbientProduct;
-	vec3 diffuse;
-	vec3 specular;
+	vec3 diffuse = vec3(0, 0, 0);
+	vec3 specular = vec3(0, 0, 0);
 	
 	vec3 N = normalize(fNormalMV);
 	vec3 E = normalize(-fPositionMV);	// Direction to the eye/camera
 	
 	for(int i = 0; i < MAX_LIGHTS; i++) {
 		 
-        		
 		 //Directional Light
         if(LightType[i] == 0) {
             vec3 Lvec = (LightPosition[i] - Origin).xyz;	// The vector to the light from the vertex   
@@ -58,7 +55,7 @@ void main()
         else if(LightType[i] == 1) {
 			// The vector to the light from the vertex   
 			vec3 Lvec = LightPosition[i].xyz - fPositionMV;
-			
+		
 			vec3 L = normalize(Lvec);			// Direction to the light source
 			vec3 R = reflect(-L, N);			//Perfect reflector
 
