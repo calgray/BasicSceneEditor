@@ -658,7 +658,7 @@ void init() {
 	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" ); CheckError();
 	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" ); CheckError();
 	
-    shaderMenu(3); CheckError();
+    shaderMenu(2); CheckError();
     
     // Objects 0, and 1 are the ground and the first light.
     addObject(0); // Square for the ground
@@ -676,7 +676,7 @@ void init() {
 	
     addObject(55); // Sphere for the first light
     sceneObjs[LIGHT1_INDEX].loc = vec4(2.0, 1.0, 1.0, 1.0);
-    sceneObjs[LIGHT1_INDEX].angles = vec3(45, 0, 0);
+    sceneObjs[LIGHT1_INDEX].angles = vec3(90, 0, 0);
 	sceneObjs[LIGHT1_INDEX].scale = 0.1;
     sceneObjs[LIGHT1_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT1_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
@@ -687,7 +687,7 @@ void init() {
 	
 	addObject(55); // Sphere for the second light
     sceneObjs[LIGHT2_INDEX].loc = vec4(-2.0, 1.0, 1.0, 1.0);
-	sceneObjs[LIGHT2_INDEX].angles = vec3(45, 0, 0);
+	sceneObjs[LIGHT2_INDEX].angles = vec3(90, 0, 0);
     sceneObjs[LIGHT2_INDEX].scale = 0.1;
     sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT2_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
@@ -698,7 +698,7 @@ void init() {
 	
 	addObject(55); // Sphere for the third light
     sceneObjs[LIGHT3_INDEX].loc = vec4(0.0, 1.0, 1.0, 1.0);
-	sceneObjs[LIGHT3_INDEX].angles = vec3(45, 0, 0);
+	sceneObjs[LIGHT3_INDEX].angles = vec3(90, 0, 0);
     sceneObjs[LIGHT3_INDEX].scale = 0.1;
     sceneObjs[LIGHT3_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT3_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
@@ -822,8 +822,8 @@ void display( void ) {
 	
 	vec4 lightDirections[MAX_LIGHTS] = {
 		view * RotateX(sceneObjs[LIGHT1_INDEX].angles.x) * RotateY(sceneObjs[LIGHT1_INDEX].angles.y) * vec4(0, 0, -1, 0),
-		view * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec4(0, 1, -1, 0),
-		view * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec4(0, 1, -1, 0)
+		view * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec4(0, 0, -1, 0),
+		view * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec4(0, 0, -1, 0)
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightDirection"), MAX_LIGHTS, *lightDirections); CheckError();
 	
