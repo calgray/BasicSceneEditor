@@ -11,9 +11,9 @@ out vec4 color;
 //camera
 uniform vec4 Origin; //faster than multiplying an inversetranspose
 
-//light * material
+//light * material (viewspace)
 uniform int LightType[MAX_LIGHTS];
-uniform vec4 LightPosition[MAX_LIGHTS]; //viewspace
+uniform vec4 LightPosition[MAX_LIGHTS];
 //uniform vec4 LightDirection[MAX_LIGHTS];
 
 
@@ -76,10 +76,7 @@ void main()
 			//  specular = vec3(0.0, 0.0, 0.0);
 			//} 
         }
-
-
 	}
 	
-    //color = vec4(diffuse, 1);
 	color = texture2D(texture, fTexCoord) * vec4((ambient + diffuse), 1) + vec4(specular, 0);
 }

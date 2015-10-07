@@ -46,6 +46,11 @@ char lab[] = "Project1";
 char *programName = NULL; // Set in main 
 int numDisplayCalls = 0; // Used to calculate the number of frames per second
 
+//-------Time---------------------
+int prevTime = 0;
+int deltaTime = 0;
+
+
 //----Shaders------------------------
 GLuint programs[3];
 GLuint shaderProgram;
@@ -82,7 +87,10 @@ typedef struct {
     float shine;
     vec3 rgb;
     float brightness; // Multiplies all colours
+	
 	int type;
+	int path;
+	
 	//int shaderId;
     int meshId;
     int texId;
@@ -315,14 +323,19 @@ static void texMenu(int id) {
     deactivateTool();
     if(currObject>=0) {
         sceneObjs[currObject].texId = id;
-        glutPostRedisplay();
+        //glutPostRedisplay();
     }
 }
 
 static void groundMenu(int id) {
     deactivateTool();
     sceneObjs[GROUND_INDEX].texId = id;
-    glutPostRedisplay();
+    //glutPostRedisplay();
+}
+
+static void pathMenu(int id) {
+	deactivateTool();
+	sceneObjs[currObject].path = id;
 }
 
 static void lightMenu(int id) {
@@ -455,6 +468,10 @@ static void makeMenu() {
     int texMenuId = createArrayMenu(numTextures, textureMenuEntries, texMenu);
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
 	
+	int pathMenuId = glutCreateMenu(pathMenu);
+	glutAddMenuEntry("Stationary", 10);
+	glutAddMenuEntry("Revolve", 11);
+	
 	int lightTypeMenuId1 = glutCreateMenu(lightTypeMenu);
 	glutAddMenuEntry("Directional", 10);
 	glutAddMenuEntry("Point", 11);
@@ -469,9 +486,9 @@ static void makeMenu() {
 	glutAddSubMenu("Type Light 1", lightTypeMenuId1);
     glutAddMenuEntry("Move Light 1",70);
     glutAddMenuEntry("R/G/B/All Light 1",71);
+	glutAddSubMenu("Type Light 2", lightTypeMenuId2);
     glutAddMenuEntry("Move Light 2",80);
     glutAddMenuEntry("R/G/B/All Light 2",81);
-	glutAddSubMenu("Type Light 2", lightTypeMenuId2);
 
     glutCreateMenu(mainmenu);
     glutAddMenuEntry("Rotate/Move Camera",50);
@@ -479,6 +496,7 @@ static void makeMenu() {
     glutAddSubMenu("Add object", objectMenuId);
     glutAddMenuEntry("Position/Scale", 41);
     glutAddMenuEntry("Rotation/Texture Scale", 55);
+	glutAddSubMenu("Path", pathMenuId);
 	glutAddSubMenu("Shader", shaderMenuId);
     glutAddSubMenu("Material", materialMenuId);
     glutAddSubMenu("Texture",texMenuId);
@@ -515,38 +533,10 @@ static void mousePassiveMotion(int x, int y) {
     mouseY=y;
 }
 
-void special(int key, int x, int y) {
-	std::cout << (int)key << std::endl;
-}
-
-void keyboard(unsigned char key, int x, int y ) {
-	float speed = 0.1f;
-	
-	//std::cout << (int)key << std::endl;
-	
+void keyboard(unsigned char key, int x, int y ) {		
 	switch ( key ) {
 	case 033:
 		exit( EXIT_SUCCESS );
-		break;
-	case 'w':
-		camPosition += speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
-									sin(camRotation.x * DegreesToRadians),
-									cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
-		break;
-	case 's':
-		camPosition -= speed * vec3(-sin(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians),
-									sin(camRotation.x * DegreesToRadians),
-									cos(camRotation.y * DegreesToRadians) * cos(camRotation.x * DegreesToRadians));
-		break;
-	case 'd':
-		camPosition -= speed * vec3(cos(camRotation.y * DegreesToRadians),
-									0,
-									sin(camRotation.y * DegreesToRadians));
-		break;
-	case 'a':
-		camPosition += speed * vec3(cos(camRotation.y * DegreesToRadians),
-									0,
-									sin(camRotation.y * DegreesToRadians));
 		break;
 	}
 }
@@ -612,6 +602,10 @@ void init() {
     glClearColor( 0.0, 0.0, 0.0, 1.0 ); /* black background */
 }
 
+void update()
+{
+	//sceneObjs[currObject].loc = vec4(cos(deltaTime), 0, sin(deltaTime));
+}
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
 void drawMesh(SceneObject sceneObj) {
@@ -628,7 +622,11 @@ void drawMesh(SceneObject sceneObj) {
 		
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
-    mat4 model = Translate(sceneObj.loc) * RotateX(sceneObj.angles[0]) * RotateY(sceneObj.angles[1]) * RotateZ(sceneObj.angles[2]) * Scale(sceneObj.scale);
+    mat4 model = Translate(sceneObj.loc) * 
+				RotateX(sceneObj.angles[0]) *
+				RotateY(sceneObj.angles[1]) *
+				RotateZ(sceneObj.angles[2]) *
+				Scale(sceneObj.scale);
     
     // Set the model-view matrix for the shaders
     glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
@@ -644,6 +642,12 @@ void drawMesh(SceneObject sceneObj) {
 void display( void ) {
     numDisplayCalls++;
 
+	int currTime = glutGet(GLUT_ELAPSED_TIME);
+	deltaTime = currTime - prevTime;
+	prevTime = currTime;
+	
+	update();
+	
 	//view gets passed via modelview matrix
 	//view = RotateX(camRotation.y) * RotateY(camRotation.x) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * 
@@ -838,7 +842,6 @@ int main( int argc, char* argv[] )
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-	glutSpecialFunc(special);
     glutIdleFunc(idle);
 
     glutMouseFunc( mouseClickOrScroll );

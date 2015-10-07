@@ -3,6 +3,7 @@
 #uname := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 uname := $(shell sh -c uname)
 
+CXX= g++
 CXXOPTS= -Wall -O3 -g
 CXXDEFS=
 CXXINCS= -I../../include
@@ -16,7 +17,7 @@ ifneq (,$(findstring Linux,$(uname)))
 endif
 
 #Windows MinGW
-ifneq (,$(findstring MINGW,$(uname)))
+ifneq (,$(findstring _NT,$(uname)))
 	LDDIRS= -L../../lib/win32
 	LDLIBS= -lassimp -lfreeglut_static -lglew32 -lopengl32 -lgdi32 -lwinmm
 	# -Wl --subsystem,windows
