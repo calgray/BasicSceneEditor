@@ -547,7 +547,7 @@ static void makeMenu() {
 	glutAddMenuEntry("Spotlight", 22);
 	
 	int lightTypeMenuId3 = glutCreateMenu(lightTypeMenu);
-	glutAddMenuEntry("Directional", 23);
+	glutAddMenuEntry("Directional", 30);
 	glutAddMenuEntry("Point", 31);
 	glutAddMenuEntry("Spotlight", 32);
 	
