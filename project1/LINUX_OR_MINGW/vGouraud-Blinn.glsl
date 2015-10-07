@@ -32,8 +32,8 @@ void main()
     texCoord = vTexCoord * texScale;
 
     vec3 ambient = AmbientProduct;
-    vec3 diffuse;
-    vec3 specular;
+    vec3 diffuse = vec3(0.0f, 0.0f, 0.0f);
+    vec3 specular = vec3(0.0f, 0.0f, 0.0f);
        
     // Transform vertex normal into eye coordinates (assumes scaling is uniform across dimensions)
     vec3 N = normalize(mat3(ModelView) * vNormal);

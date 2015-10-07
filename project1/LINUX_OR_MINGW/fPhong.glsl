@@ -30,8 +30,8 @@ void main()
 {
 	// Compute terms in the illumination equation
     vec3 ambient = AmbientProduct;
-	vec3 diffuse;
-	vec3 specular;
+	vec3 diffuse = vec3(0.0f, 0.0f, 0.0f);
+	vec3 specular = vec3(0.0f, 0.0f, 0.0f);
 	
 	vec3 N = normalize(fNormalMV);
 	vec3 E = normalize(-fPositionMV);	// Direction to the eye/camera
@@ -40,7 +40,8 @@ void main()
 		 
         		
 		 //Directional Light
-        if(LightType[i] == 0) {
+        //if(LightType[i] == 0) {
+		if(false){
             vec3 Lvec = (LightPosition[i] - Origin).xyz;	// The vector to the light from the vertex   
 			
 			vec3 L = normalize(Lvec);			// Direction to the light source
@@ -55,7 +56,8 @@ void main()
 		
         }
 		//Point Light
-        else if(LightType[i] == 1) {
+        //else if(LightType[i] == 1) {
+		else{
 			// The vector to the light from the vertex   
 			vec3 Lvec = LightPosition[i].xyz - fPositionMV;
 			
