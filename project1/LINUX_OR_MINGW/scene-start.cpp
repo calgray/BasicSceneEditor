@@ -381,8 +381,6 @@ static void lightMenu(int id) {
 		case 72: {
 			toolObj = LIGHT1_INDEX;
 			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 73: {
 			break;
 		}
 		case 80: {
@@ -398,8 +396,6 @@ static void lightMenu(int id) {
 		case 82: {
 			toolObj = LIGHT2_INDEX;
 			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 83: {
 			break;
 		}
 		case 90: {
@@ -413,10 +409,8 @@ static void lightMenu(int id) {
 			break;
 		}
 		case 92: {
-			toolObj = LIGHT1_INDEX;
+			toolObj = LIGHT3_INDEX;
 			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 93: {
 			break;
 		}
 		default: {
@@ -783,10 +777,10 @@ void display( void ) {
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
 	
-	vec3 lightDirections[MAX_LIGHTS] = {
-		view * RotateX(sceneObjs[LIGHT1_INDEX].angles.x) * RotateY(sceneObjs[LIGHT1_INDEX].angles.y) * vec3(0,0,-1),
-		view * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec3(0,0,-1),
-		view * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec3(0,0,-1)
+	vec4 lightDirections[MAX_LIGHTS] = {
+		view * RotateX(sceneObjs[LIGHT1_INDEX].angles.x) * RotateY(sceneObjs[LIGHT1_INDEX].angles.y) * vec4(0,0,-1,1),
+		view * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec4(0,0,-1,1),
+		view * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec4(0,0,-1,1)
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightDirection"), MAX_LIGHTS, *lightDirections); CheckError();
 	
