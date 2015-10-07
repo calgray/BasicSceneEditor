@@ -783,10 +783,10 @@ void display( void ) {
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
 	
-	vec4 lightDirections[MAX_LIGHTS] = {
-		view * sceneObjs[LIGHT1_INDEX].angles,
-		view * sceneObjs[LIGHT2_INDEX].angles,
-		view * sceneObjs[LIGHT3_INDEX].angles
+	vec3 lightDirections[MAX_LIGHTS] = {
+		view * RotateX(sceneObjs[LIGHT1_INDEX].angles.x) * RotateY(sceneObjs[LIGHT1_INDEX].angles.y) * vec3(0,0,-1),
+		view * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec3(0,0,-1),
+		view * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec3(0,0,-1)
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightDirection"), MAX_LIGHTS, *lightDirections); CheckError();
 	

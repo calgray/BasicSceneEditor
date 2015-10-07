@@ -14,7 +14,7 @@ uniform vec4 Origin; //faster than multiplying an inversetranspose
 //light * material (viewspace)
 uniform int LightType[MAX_LIGHTS];
 uniform vec4 LightPosition[MAX_LIGHTS];
-uniform vec4 LightDirection[MAX_LIGHTS];
+uniform vec3 LightDirection[MAX_LIGHTS];
 
 
 
@@ -76,7 +76,7 @@ void main()
 			vec3 Lvec = LightPosition[i].xyz - fPositionMV;
 			
 			//angle between the spotlight centre and the fragment being shaded.
-			float coneAngle = acos(dot(-Lvec, normalize(LightDirection[i].xyz)));
+			float coneAngle = acos(dot(normalize(-Lvec), normalize(LightDirection[i].xyz)));
 		
 			vec3 L = normalize(Lvec);           // Direction to the light source
 			vec3 H = normalize( L + E );        // Halfway vector
@@ -84,8 +84,13 @@ void main()
 			//reduce intensity with distance from light and increasing angle
 			float dist = length(Lvec) + 1.0f;
 			float attenuation;
-			if(coneAngle > 0.5) attenuation = 0.0f ;
-			else attenuation = 1.0f / dist / dist * atan(2 * tan(1) * coneAngle);
+			if(coneAngle > 0.5){
+				attenuation = 0.0f ;
+			}
+			else{
+				attenuation = 1.0f / dist / dist ;
+				//* atan(2 * tan(1.0) * coneAngle);
+			}
 			
 			float Kd = max( dot(L, N), 0.0 ) * attenuation;
 			diffuse += Kd * DiffuseProduct[i];
