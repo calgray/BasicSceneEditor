@@ -706,6 +706,17 @@ void init() {
 	sceneObjs[LIGHT3_INDEX].phi = 0.5f;
 	sceneObjs[LIGHT3_INDEX].theta = 0.2f;
 	sceneObjs[LIGHT3_INDEX].falloff = 0.5f;
+	
+	addObject(55); // Sphere for the third light
+    sceneObjs[LIGHT3_INDEX].loc = vec4(0.0, 1.0, 1.0, 1.0);
+	sceneObjs[LIGHT3_INDEX].angles = vec3(90, 0, 0);
+    sceneObjs[LIGHT3_INDEX].scale = 0.1;
+    sceneObjs[LIGHT3_INDEX].texId = 0; // Plain texture
+    sceneObjs[LIGHT3_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
+	sceneObjs[LIGHT3_INDEX].type = 2;
+	sceneObjs[LIGHT3_INDEX].phi = 0.5f;
+	sceneObjs[LIGHT3_INDEX].theta = 0.2f;
+	sceneObjs[LIGHT3_INDEX].falloff = 0.5f;
 
     addObject(rand() % numMeshes); // A test mesh
 
