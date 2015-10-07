@@ -40,8 +40,7 @@ void main()
 		 
         		
 		 //Directional Light
-        //if(LightType[i] == 0) {
-		if(false){
+        if(LightType[i] == 0) {
             vec3 Lvec = (LightPosition[i] - Origin).xyz;	// The vector to the light from the vertex   
 			
 			vec3 L = normalize(Lvec);			// Direction to the light source
@@ -56,8 +55,7 @@ void main()
 		
         }
 		//Point Light
-        //else if(LightType[i] == 1) {
-		else{
+        else if(LightType[i] == 1) {
 			// The vector to the light from the vertex   
 			vec3 Lvec = LightPosition[i].xyz - fPositionMV;
 			
