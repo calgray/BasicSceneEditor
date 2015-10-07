@@ -47,7 +47,7 @@ void main()
       
 		if(LightType[i] == 0) {
 			vec3 Lvec = (LightPosition[i] - Origin).xyz; // The vector to the light from the vertex    
-			  
+			 
 			// Unit direction vectors for Blinn-Phong shading calculation
 			vec3 L = normalize( Lvec );   // Direction to the light source
 			vec3 H = normalize( L + E );  // Halfway vector

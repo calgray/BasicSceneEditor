@@ -258,8 +258,8 @@ static void adjustScaleY(vec2 sy) {
 }
 
 static void adjustAngleYX(vec2 angle_yx) {
-    sceneObjs[toolObj].angles[1]+=angle_yx[0];
-    sceneObjs[toolObj].angles[0]+=angle_yx[1];
+    sceneObjs[toolObj].angles[1] += angle_yx[0];
+    sceneObjs[toolObj].angles[0] += angle_yx[1];
 }
 
 static void adjustAngleZTexscale(vec2 az_ts) {
@@ -380,9 +380,7 @@ static void lightMenu(int id) {
 		}
 		case 72: {
 			toolObj = LIGHT1_INDEX;
-			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 73: {
+			setToolCallbacks(adjustAngleYX, mat2(400, 0, 0, -400), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
 			break;
 		}
 		case 80: {
@@ -395,11 +393,9 @@ static void lightMenu(int id) {
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
-		case 72: {
+		case 82: {
 			toolObj = LIGHT2_INDEX;
-			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 83: {
+			setToolCallbacks(adjustAngleYX, mat2(400, 0, 0, -400), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
 			break;
 		}
 		case 90: {
@@ -409,18 +405,16 @@ static void lightMenu(int id) {
 		}
 		case 91: {
 			toolObj = LIGHT3_INDEX;
-			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
+			setToolCallbacks(adjustRedGreen,  mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
 		case 92: {
-			toolObj = LIGHT1_INDEX;
-			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
-		}
-		case 93: {
+			toolObj = LIGHT3_INDEX;
+			setToolCallbacks(adjustAngleYX, mat2(400, 0, 0, -400), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
 			break;
 		}
 		default: {
-			printf("Error in lightMenu\n");
+			printf("Error in lightMenu\n %i", id);
 			exit(1);
 		}
 	}
@@ -547,7 +541,7 @@ static void makeMenu() {
 	glutAddMenuEntry("Spotlight", 22);
 	
 	int lightTypeMenuId3 = glutCreateMenu(lightTypeMenu);
-	glutAddMenuEntry("Directional", 23);
+	glutAddMenuEntry("Directional", 30);
 	glutAddMenuEntry("Point", 31);
 	glutAddMenuEntry("Spotlight", 32);
 	
@@ -725,9 +719,9 @@ void drawMesh(SceneObject sceneObj) {
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
     mat4 model = Translate(sceneObj.loc) * 
-				RotateX(sceneObj.angles[0]) *
-				RotateY(sceneObj.angles[1]) *
-				RotateZ(sceneObj.angles[2]) *
+				RotateX(sceneObj.angles.x) *
+				RotateY(sceneObj.angles.y) *
+				RotateZ(sceneObj.angles.z) *
 				Scale(sceneObj.scale);
     
     // Set the model-view matrix for the shaders
@@ -754,9 +748,9 @@ void display( void ) {
 	//view gets passed via modelview matrix
 	//view = RotateX(camRotation.y) * RotateY(camRotation.x) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * 
+			RotateZ(camRotation.z) *
 			RotateX(camRotation.x) * 
 			RotateY(camRotation.y) *
-			RotateZ(camRotation.z) *
 			Translate(camPosition);
 	
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -783,12 +777,22 @@ void display( void ) {
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
 	
+	/*
+	mat3 viewRot = mat4(view[0][0], view[0][1], view[0][2],
+						view[1][0], view[1][1], view[1][2],
+						view[2][0], view[2][1], view[2][2]);
+	*/
+	
+	mat4 viewRot = RotateX(camRotation.x) * RotateY(camRotation.y) * RotateZ(camRotation.z);
+	
 	vec4 lightDirections[MAX_LIGHTS] = {
-		view * sceneObjs[LIGHT1_INDEX].angles,
-		view * sceneObjs[LIGHT2_INDEX].angles,
-		view * sceneObjs[LIGHT3_INDEX].angles
+		viewRot * RotateX(sceneObjs[LIGHT1_INDEX].angles.x) * RotateY(sceneObjs[LIGHT1_INDEX].angles.y) * vec4(0, 0, -1, 0),
+		viewRot * RotateX(sceneObjs[LIGHT2_INDEX].angles.x) * RotateY(sceneObjs[LIGHT2_INDEX].angles.y) * vec4(0, 0, -1, 0),
+		viewRot * RotateX(sceneObjs[LIGHT3_INDEX].angles.x) * RotateY(sceneObjs[LIGHT3_INDEX].angles.y) * vec4(0, 0, -1, 0)
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightDirection"), MAX_LIGHTS, *lightDirections); CheckError();
+	
+	std::cout << lightDirections[2] << std::endl;
 	
 	//Ambient determined by the ambient light source
 	vec3 ambient = sceneObjs[AMBIENT_INDEX].rgb * sceneObjs[AMBIENT_INDEX].brightness;
