@@ -768,6 +768,13 @@ void display( void ) {
     };
 	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
 	
+	vec4 lightDirections[MAX_LIGHTS] = {
+		view * sceneObjs[LIGHT1_INDEX].angles,
+		view * sceneObjs[LIGHT2_INDEX].angles,
+		view * sceneObjs[LIGHT3_INDEX].angles
+    };
+	glUniform4fv( glGetUniformLocation(shaderProgram, "LightDirection"), MAX_LIGHTS, *lightDirections); CheckError();
+	
 	//Ambient determined by the ambient light source
 	vec3 ambient = sceneObjs[AMBIENT_INDEX].rgb * sceneObjs[AMBIENT_INDEX].brightness;
 	

@@ -14,7 +14,7 @@ uniform vec4 Origin; //faster than multiplying an inversetranspose
 //light * material (viewspace)
 uniform int LightType[MAX_LIGHTS];
 uniform vec4 LightPosition[MAX_LIGHTS];
-//uniform vec4 LightDirection[MAX_LIGHTS];
+uniform vec4 LightDirection[MAX_LIGHTS];
 
 
 
