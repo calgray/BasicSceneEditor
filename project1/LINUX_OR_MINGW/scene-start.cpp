@@ -379,6 +379,10 @@ static void lightMenu(int id) {
 			break;
 		}
 		case 72: {
+			toolObj = LIGHT1_INDEX;
+			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
+		}
+		case 73: {
 			break;
 		}
 		case 80: {
@@ -391,7 +395,11 @@ static void lightMenu(int id) {
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
-		case 82: {
+		case 72: {
+			toolObj = LIGHT2_INDEX;
+			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
+		}
+		case 83: {
 			break;
 		}
 		case 90: {
@@ -405,6 +413,10 @@ static void lightMenu(int id) {
 			break;
 		}
 		case 92: {
+			toolObj = LIGHT1_INDEX;
+			setToolCallbacks(adjustAngleYX, mat2(1.0, 0 ,0 ,1.0), adjustAngleYX, mat2(1.0, 0, 0, 1.0));
+		}
+		case 93: {
 			break;
 		}
 		default: {
@@ -545,12 +557,15 @@ static void makeMenu() {
 	glutAddSubMenu("Type Light 1", lightTypeMenuId1);
     glutAddMenuEntry("Move Light 1",70);
     glutAddMenuEntry("R/G/B/All Light 1",71);
+    glutAddMenuEntry("Yaw/Pitch Light 1",72);
 	glutAddSubMenu("Type Light 2", lightTypeMenuId2);
     glutAddMenuEntry("Move Light 2",80);
     glutAddMenuEntry("R/G/B/All Light 2",81);
+	glutAddMenuEntry("Yaw/Pitch Light 2",82);
 	glutAddSubMenu("Type Light 3", lightTypeMenuId3);
     glutAddMenuEntry("Move Light 3",90);
     glutAddMenuEntry("R/G/B/All Light 3",91);
+	glutAddMenuEntry("Yaw/Pitch Light 3",92);
 
     glutCreateMenu(mainmenu);
     glutAddMenuEntry("Rotate/Move Camera",50);
