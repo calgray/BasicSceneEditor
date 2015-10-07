@@ -77,11 +77,13 @@ GLuint textureIDs[numTextures]; // Stores the IDs returned by glGenTextures
 typedef struct {
     vec4 loc;
     float scale;
-    float angles[3]; // rotations around X, Y and Z axes.
+    vec3 angles; // rotations around X, Y and Z axes.
     float diffuse, specular, ambient; // Amount of each light component
     float shine;
     vec3 rgb;
     float brightness; // Multiplies all colours
+	int type;
+	//int shaderId;
     int meshId;
     int texId;
     float texScale;
@@ -328,6 +330,11 @@ static void lightMenu(int id) {
 	switch(id) {
 		case 60: {
 			toolObj = AMBIENT_INDEX;
+			setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
+			break;
+		}
+		case 61: {
+			toolObj = AMBIENT_INDEX;
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
@@ -341,6 +348,9 @@ static void lightMenu(int id) {
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
+		case 72: {
+			break;
+		}
 		case 80: {
 			toolObj = LIGHT2_INDEX;
 			setToolCallbacks(adjustLocXZ, camRotZ(), adjustBrightnessY, mat2( 1.0, 0.0, 0.0, 10.0) );
@@ -351,9 +361,33 @@ static void lightMenu(int id) {
 			setToolCallbacks(adjustRedGreen, mat2(1.0, 0, 0, 1.0), adjustBlueBrightness, mat2(1.0, 0, 0, 1.0) );
 			break;
 		}
+		case 82: {
+			break;
+		}
 		default: {
 			printf("Error in lightMenu\n");
 			exit(1);
+		}
+	}
+}
+
+static void lightTypeMenu(int id) {
+	switch(id) {
+		case 10: {
+			sceneObjs[LIGHT1_INDEX].type = 0;
+			break;
+		}
+		case 11: {
+			sceneObjs[LIGHT1_INDEX].type = 1;
+			break;
+		}
+		case 20: {
+			sceneObjs[LIGHT2_INDEX].type = 0;
+			break;
+		}
+		case 21: {
+			sceneObjs[LIGHT2_INDEX].type = 1;
+			break;
 		}
 	}
 }
@@ -365,14 +399,14 @@ static int createArrayMenu(int size, const char menuEntries[][128], void(*menuFn
     for(int i=0; i<nSubMenus; i++) {
         subMenus[i] = glutCreateMenu(menuFn);
         for(int j = i*10+1; j<=std::min(i*10+10, size); j++)
-            glutAddMenuEntry( menuEntries[j-1] , j); CheckError();
+            glutAddMenuEntry( menuEntries[j-1], j); CheckError();
     }
     int menuId = glutCreateMenu(menuFn);
 
     for(int i=0; i<nSubMenus; i++) {
         char num[6];
         sprintf(num, "%d-%d", i*10+1, std::min(i*10+10, size));
-        glutAddSubMenu(num,subMenus[i]); CheckError();
+        glutAddSubMenu(num, subMenus[i]); CheckError();
     }
     return menuId;
 }
@@ -410,9 +444,9 @@ static void mainmenu(int id) {
 static void makeMenu() {
 	
 	char shaderMenuEntries[3][128] = { "blinn-gouruad", "blinn-phong", "phong" };
-	int shaderId = createArrayMenu(3, shaderMenuEntries, shaderMenu);
+	int shaderMenuId = createArrayMenu(3, shaderMenuEntries, shaderMenu);
 	
-    int objectId = createArrayMenu(numMeshes, objectMenuEntries, objectMenu);
+    int objectMenuId = createArrayMenu(numMeshes, objectMenuEntries, objectMenu);
 
     int materialMenuId = glutCreateMenu(materialMenu);
     glutAddMenuEntry("R/G/B/All",10);
@@ -420,21 +454,32 @@ static void makeMenu() {
 
     int texMenuId = createArrayMenu(numTextures, textureMenuEntries, texMenu);
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
-
+	
+	int lightTypeMenuId1 = glutCreateMenu(lightTypeMenu);
+	glutAddMenuEntry("Directional", 10);
+	glutAddMenuEntry("Point", 11);
+	
+	int lightTypeMenuId2 = glutCreateMenu(lightTypeMenu);
+	glutAddMenuEntry("Directional", 20);
+	glutAddMenuEntry("Point", 21);
+	
     int lightMenuId = glutCreateMenu(lightMenu);
-	glutAddMenuEntry("R/G/B/All Ambient Light", 60);
+	glutAddMenuEntry("Move Light Ambient", 60);
+	glutAddMenuEntry("R/G/B/All Light Ambient", 61);
+	glutAddSubMenu("Type Light 1", lightTypeMenuId1);
     glutAddMenuEntry("Move Light 1",70);
     glutAddMenuEntry("R/G/B/All Light 1",71);
     glutAddMenuEntry("Move Light 2",80);
     glutAddMenuEntry("R/G/B/All Light 2",81);
+	glutAddSubMenu("Type Light 2", lightTypeMenuId2);
 
-    glutCreateMenu(mainmenu);	
+    glutCreateMenu(mainmenu);
     glutAddMenuEntry("Rotate/Move Camera",50);
 	glutAddMenuEntry("Rotate/Pan Camera", 51);
-    glutAddSubMenu("Add object", objectId);
+    glutAddSubMenu("Add object", objectMenuId);
     glutAddMenuEntry("Position/Scale", 41);
     glutAddMenuEntry("Rotation/Texture Scale", 55);
-	glutAddSubMenu("Shader", shaderId);
+	glutAddSubMenu("Shader", shaderMenuId);
     glutAddSubMenu("Material", materialMenuId);
     glutAddSubMenu("Texture",texMenuId);
     glutAddSubMenu("Ground Texture",groundMenuId);
@@ -544,12 +589,14 @@ void init() {
     sceneObjs[LIGHT1_INDEX].scale = 0.1;
     sceneObjs[LIGHT1_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT1_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
-
+	sceneObjs[LIGHT1_INDEX].type = 1;
+	
 	addObject(55); // Sphere for the second light
     sceneObjs[LIGHT2_INDEX].loc = vec4(-2.0, 1.0, 1.0, 1.0);
     sceneObjs[LIGHT2_INDEX].scale = 0.1;
     sceneObjs[LIGHT2_INDEX].texId = 0; // Plain texture
     sceneObjs[LIGHT2_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
+	sceneObjs[LIGHT1_INDEX].type = 1;
 	
     addObject(rand() % numMeshes); // A test mesh
 
@@ -612,17 +659,32 @@ void display( void ) {
 	//Set the projection matrix for the shaders
     glUniformMatrix4fv( projectionU, 1, GL_TRUE, projection ); CheckError();
 	
+	glUniform4fv( glGetUniformLocation(shaderProgram, "Origin"), 1, view * vec4(0, 0, 0, 1));
+	
+	int lightTypes[MAX_LIGHTS] = {
+		sceneObjs[LIGHT1_INDEX].type,
+		sceneObjs[LIGHT2_INDEX].type
+	};
+	glUniform1iv( glGetUniformLocation(shaderProgram, "LightType"), MAX_LIGHTS, lightTypes); CheckError();
+	
 	
     vec4 lightPositions[MAX_LIGHTS] = {
 		view * sceneObjs[LIGHT1_INDEX].loc,
 		view * sceneObjs[LIGHT2_INDEX].loc
     };
-	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions);
-
+	glUniform4fv( glGetUniformLocation(shaderProgram, "LightPosition"), MAX_LIGHTS, *lightPositions); CheckError();
+	
+	//Ambient determined by the ambient light source
 	vec3 ambient = sceneObjs[AMBIENT_INDEX].rgb * sceneObjs[AMBIENT_INDEX].brightness;
+	
     vec3 color[MAX_LIGHTS] = {
 		sceneObjs[LIGHT1_INDEX].rgb * sceneObjs[LIGHT1_INDEX].brightness,
-		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness,
+		sceneObjs[LIGHT2_INDEX].rgb * sceneObjs[LIGHT2_INDEX].brightness
+	};
+	
+	 vec3 zero[MAX_LIGHTS] = {
+		vec3(0,0,0), 
+		vec3(0,0,0)
 	};
 	
     for(int i=0; i<nObjects; i++) {
@@ -633,17 +695,25 @@ void display( void ) {
           so.diffuse * so.rgb * so.brightness * color[0],
           so.diffuse * so.rgb * so.brightness * color[1]
         };
-		vec3 specular[MAX_LIGHTS] = { so.specular * color[0], so.specular * color[1] };
-        vec3 zero[MAX_LIGHTS] = { vec3(0,0,0), vec3(0,0,0) };
+		
+		vec3 specular[MAX_LIGHTS] = { 
+			so.specular * color[0], 
+			so.specular * color[1]
+		};
         
 		switch(i) {
+		case AMBIENT_INDEX:
+			glUniform3fv(glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, ambient);
+            glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
+            glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
+			break;
 		case LIGHT1_INDEX: 
-			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[0] * 0.2 );
+			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[0] );
             glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
             glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
 			break;
 		case LIGHT2_INDEX: 
-			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[1] * 0.2 );
+			glUniform3fv( glGetUniformLocation(shaderProgram, "AmbientProduct"), 1, color[1] );
             glUniform3fv( glGetUniformLocation(shaderProgram, "DiffuseProduct"), MAX_LIGHTS, *zero );
             glUniform3fv( glGetUniformLocation(shaderProgram, "SpecularProduct"), MAX_LIGHTS, *zero );
 			break;

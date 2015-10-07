@@ -18,7 +18,7 @@ uniform float texScale;
 
 void main()
 {
-    // Transform vertex position into eye coordinates
+    // Transform vertex position into view coordinates
     fPositionMV = (ModelView * vPosition).xyz;
     gl_Position = Projection * vec4(fPositionMV, 1.0f);
 	

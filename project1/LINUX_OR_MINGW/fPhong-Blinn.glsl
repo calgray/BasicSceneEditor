@@ -42,7 +42,7 @@ void main()
         float Kd = max( dot(L, N), 0.0 ) * attenuation;
         diffuse += Kd * DiffuseProduct[i];
         
-        float Ks = pow( max(dot(N, H), 0.0), Shininess * 2 ) * attenuation;
+        float Ks = pow( max(dot(N, H), 0.0), Shininess * 3 ) * attenuation;
         specular += Ks * SpecularProduct[i];
 
         //if( dot(L, N) < 0.0 ) {
