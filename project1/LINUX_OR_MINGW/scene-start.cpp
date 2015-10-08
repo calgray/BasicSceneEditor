@@ -1,14 +1,6 @@
 
 #include "Angel.h"
 
-
-//NOTES
-//Why the hell does angel want to use degrees instead of radians? 
-//Break into comment sections if we have to use a monster source file...
-//passing MV and P to shader
-//Lighting is gonna be done in view space, but no biggy (better for SSAO i think)
-//Previous rotation system is a mess (and focus always 0,0,0), redoing using cam pos, rot (maybe camFocus, dist, rot)
-
 #include "bitmap.h"
 #include "bitmap.c"
 
@@ -30,8 +22,6 @@ GLuint projectionU, modelViewU;
 // Camera ---------------------------
 vec3 camPosition = vec3(0, 0, 0);
 vec3 camRotation = vec3(40, 0, 0); //pitch yaw roll
-
-//-Z = up
 
 // Camera locked to centre scene
 static float viewDist = 1.5; // Distance from the camera to the centre of the scene
@@ -96,7 +86,6 @@ typedef struct {
 	float speed; //path speed
 	float distance; //path distance
 	
-	//int shaderId;
     int meshId;
     int texId;
     float texScale;
@@ -118,7 +107,6 @@ void loadTextureIfNotAlreadyLoaded(int i) {
     textures[i] = loadTextureNum(i);
     glActiveTexture(GL_TEXTURE0);
 
-    // Based on: http://www.opengl.org/wiki/Common_Mistakes
     glBindTexture(GL_TEXTURE_2D, textureIDs[i]);
 
 
