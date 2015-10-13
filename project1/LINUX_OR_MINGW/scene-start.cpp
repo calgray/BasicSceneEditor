@@ -1,14 +1,6 @@
 
 #include "Angel.h"
 
-
-//NOTES
-//Why the hell does angel want to use degrees instead of radians? 
-//Break into comment sections if we have to use a monster source file...
-//passing MV and P to shader
-//Lighting is gonna be done in view space, but no biggy (better for SSAO i think)
-//Previous rotation system is a mess (and focus always 0,0,0), redoing using cam pos, rot (maybe camFocus, dist, rot)
-
 #include "bitmap.h"
 #include "bitmap.c"
 
@@ -30,8 +22,6 @@ GLuint projectionU, modelViewU;
 // Camera ---------------------------
 vec3 camPosition = vec3(0, 0, 0);
 vec3 camRotation = vec3(40, 0, 0); //pitch yaw roll
-
-//-Z = up
 
 // Camera locked to centre scene
 static float viewDist = 1.5; // Distance from the camera to the centre of the scene
@@ -96,7 +86,6 @@ typedef struct {
 	float speed; //path speed
 	float distance; //path distance
 	
-	//int shaderId;
     int meshId;
     int texId;
     float texScale;
@@ -118,7 +107,6 @@ void loadTextureIfNotAlreadyLoaded(int i) {
     textures[i] = loadTextureNum(i);
     glActiveTexture(GL_TEXTURE0);
 
-    // Based on: http://www.opengl.org/wiki/Common_Mistakes
     glBindTexture(GL_TEXTURE_2D, textureIDs[i]);
 
 
@@ -707,6 +695,17 @@ void init() {
 	sceneObjs[LIGHT3_INDEX].theta = 0.2f;
 	sceneObjs[LIGHT3_INDEX].falloff = 0.5f;
 	
+	addObject(55); // Sphere for the third light
+    sceneObjs[LIGHT3_INDEX].loc = vec4(0.0, 1.0, 1.0, 1.0);
+	sceneObjs[LIGHT3_INDEX].angles = vec3(90, 0, 0);
+    sceneObjs[LIGHT3_INDEX].scale = 0.1;
+    sceneObjs[LIGHT3_INDEX].texId = 0; // Plain texture
+    sceneObjs[LIGHT3_INDEX].brightness = 1.0; // The light's brightness is 5 times this (below).
+	sceneObjs[LIGHT3_INDEX].type = 2;
+	sceneObjs[LIGHT3_INDEX].phi = 0.5f;
+	sceneObjs[LIGHT3_INDEX].theta = 0.2f;
+	sceneObjs[LIGHT3_INDEX].falloff = 0.5f;
+
     addObject(rand() % numMeshes); // A test mesh
 
     // We need to enable the depth test to discard fragments that
