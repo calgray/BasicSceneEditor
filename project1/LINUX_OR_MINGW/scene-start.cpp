@@ -12,10 +12,11 @@
 GLint windowHeight=640, windowWidth=960;
 
 #include "gnatidread.h"
+#include "gnatidread2.h"
 
 
 // IDs for the GLSL program and GLSL variables.
-GLuint vPosition, vNormal, vTexCoord;
+GLuint vPosition, vNormal, vTexCoord, vBoneWeights, vBoneIndices;
 GLuint projectionU, modelViewU;
 //--------------------------------------------
 
@@ -49,6 +50,8 @@ GLuint shaderProgram;
 // -----Meshes----------------------------------------------------------
 // Uses the type aiMesh from ../../assimp--3.0.1270/include/assimp/mesh.h
 //                                            (numMeshes is defined in gnatidread.h)
+
+const aiScene* scenes[numMeshes];
 aiMesh* meshes[numMeshes]; // For each mesh we have a pointer to the mesh to draw
 GLuint vaoIDs[numMeshes]; // and a corresponding VAO ID from glGenVertexArrays
 
@@ -135,26 +138,56 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
         exit(1);
     }
 
-    if(meshes[meshNumber] != NULL)
-        return; // Already loaded
+    if(meshes[meshNumber] != NULL) return; // Already loaded
 
-    aiMesh* mesh = loadMesh(meshNumber);
+    const aiScene* scene = loadScene(meshNumber);
+    scenes[meshNumber] = scene;
+    aiMesh* mesh = scene->mMeshes[0];
     meshes[meshNumber] = mesh;
-
+    
     glBindVertexArray( vaoIDs[meshNumber] );
-
+    
+    GLuint buffer[2];
+    glGenBuffers( 2, buffer );
+    
+    //VBO
     // Create and initialize a buffer object for positions and texture coordinates, initially empty.
     // mesh->mTextureCoords[0] has space for up to 3 dimensions, but we only need 2.
-    GLuint buffer[1];
-    glGenBuffers( 1, buffer );
     glBindBuffer( GL_ARRAY_BUFFER, buffer[0] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3)*mesh->mNumVertices, NULL, GL_STATIC_DRAW );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3+4+4)*mesh->mNumVertices, NULL, GL_STATIC_DRAW );
 
     int nVerts = mesh->mNumVertices;
+    //Get Bones indices and weights
+    GLint boneIndices[nVerts][4];
+    GLfloat boneWeights[nVerts][4];
+    getBonesAffectingEachVertex(mesh, boneIndices, boneWeights);
+    
+    //Non interleaved attributes
+    
     // Next, we load the position and texCoord data in parts.    
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(float)*3*nVerts, mesh->mVertices );
     glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
+    
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*10*nVerts, sizeof(float)*4*nVerts, boneWeights);
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*14*nVerts, sizeof(float)*4*nVerts, boneIndices);
+    
+    // vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
+    glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
+    glEnableVertexAttribArray( vPosition );
+
+    // vTexCoord is actually 2D - the third dimension is ignored (it's always 0.0)
+    glVertexAttribPointer( vTexCoord, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*3*nVerts) );
+    glEnableVertexAttribArray( vTexCoord );
+    
+    glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*6*nVerts) );
+    glEnableVertexAttribArray( vNormal );
+    
+    glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*10*nVerts));
+    
+    glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*14*nVerts));
+    
+    
     // Load the element index data
     GLuint elements[mesh->mNumFaces*3];
     for(GLuint i=0; i < mesh->mNumFaces; i++) {
@@ -163,26 +196,13 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
         elements[i*3+2] = mesh->mFaces[i].mIndices[2];
     }
 
-    GLuint elementBufferId[1];
-    glGenBuffers(1, elementBufferId);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferId[0]);
+    //EBO/IBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
 
-    // vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
-    glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
-    glEnableVertexAttribArray( vPosition );
 
-    // vTexCoord is actually 2D - the third dimension is ignored (it's always 0.0)
-    glVertexAttribPointer( vTexCoord, 3, GL_FLOAT, GL_FALSE, 0,
-                           BUFFER_OFFSET(sizeof(float)*3*mesh->mNumVertices) );
-    glEnableVertexAttribArray( vTexCoord );
-    glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0,
-                           BUFFER_OFFSET(sizeof(float)*6*mesh->mNumVertices) );
-    glEnableVertexAttribArray( vNormal );
     CheckError();
 }
-
-// --------------------------------------
 
 
 //------------Tool Callbacks---------------------
@@ -315,9 +335,12 @@ static void shaderMenu(int id) {
     vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
     vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
     vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
-
+    vBoneWeights = glGetAttribLocation(shaderProgram, "vBoneWeights");
+    vBoneIndices = glGetAttribLocation(shaderProgram, "vBoneIndices");
+    
     projectionU = glGetUniformLocation(shaderProgram, "Projection");
     modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
+    
     
 	//glUseProgram(shaderProgram); CheckError();
 }
@@ -598,7 +621,6 @@ static void makeMenu() {
 //------------Input------------------------------------------
 static void mouseClickOrScroll(int button, int state, int x, int y) {
   
-	//global defined in gnatidread.h ... (bad practice, should only declare extern variable in header and define variable in source)
 	prevPos = vec2(currMouseXYscreen(x,y));
   
     if(button==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
@@ -652,7 +674,7 @@ void init() {
     addObject(0); // Square for the ground
     sceneObjs[GROUND_INDEX].loc = vec4(0.0, 0.0, 0.0, 1.0);
     sceneObjs[GROUND_INDEX].scale = 10.0;
-    sceneObjs[GROUND_INDEX].angles[0] = 90.0; // Rotate it.
+    sceneObjs[GROUND_INDEX].angles[0] = -90.0; // Rotate it.
     sceneObjs[GROUND_INDEX].specular = 0.3;
     sceneObjs[GROUND_INDEX].texScale = 5.0; // Repeat the texture.
 
@@ -745,6 +767,7 @@ void update()
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
 void drawMesh(SceneObject sceneObj) {
+  
     // Activate a texture, loading if needed.
     loadTextureIfNotAlreadyLoaded(sceneObj.texId); CheckError();
     glActiveTexture(GL_TEXTURE0 ); CheckError();
@@ -754,8 +777,11 @@ void drawMesh(SceneObject sceneObj) {
     // surface but there could be separate types for, e.g., specularity and normals. 
     glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 ); CheckError();
 	
-	//sceneObj.loc += 0.01f * vec3(1, 0, 0);
-		
+    int nBones = meshes[sceneObj.meshId]->mNumBones;
+    if(nBones == 0) nBones = 1;
+    //mat4 boneTransforms[nBones];
+    //calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], 0, 0, boneTransforms);
+    
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
     mat4 model = Translate(sceneObj.loc) *
