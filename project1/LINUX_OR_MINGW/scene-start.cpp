@@ -779,7 +779,7 @@ void drawMesh(SceneObject sceneObj) {
 	
     int nBones = meshes[sceneObj.meshId]->mNumBones;
     if(nBones == 0) nBones = 1;
-    //mat4 boneTransforms[nBones];
+    //mat4 boneTransforms[nBones]; //TODO: causes segmentation fault, use new or malloc
     //calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], 0, 0, boneTransforms);
     
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
