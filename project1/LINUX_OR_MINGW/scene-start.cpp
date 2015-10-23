@@ -610,7 +610,6 @@ static void makeMenu() {
 //------------Input------------------------------------------
 static void mouseClickOrScroll(int button, int state, int x, int y) {
   
-	//global defined in gnatidread.h ... (bad practice, should only declare extern variable in header and define variable in source)
 	prevPos = vec2(currMouseXYscreen(x,y));
   
     if(button==GLUT_LEFT_BUTTON && state == GLUT_DOWN)
