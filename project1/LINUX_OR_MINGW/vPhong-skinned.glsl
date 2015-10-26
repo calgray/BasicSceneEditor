@@ -44,6 +44,6 @@ void main()
     fPositionMV = (ModelView * Bone * vPosition).xyz;
     gl_Position = Projection * vec4(fPositionMV, 1.0f);
 	
-	fNormalMV = mat3(ModelView) * vNormal;
+	fNormalMV = mat3(ModelView * Bone) * vNormal;
     fTexCoord = vTexCoord * texScale;
 }
