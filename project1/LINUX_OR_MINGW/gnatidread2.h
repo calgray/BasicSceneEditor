@@ -34,7 +34,7 @@ void getBonesAffectingEachVertex(aiMesh* mesh, GLint boneIDs[][4], GLfloat boneW
             float Weight = mesh->mBones[boneID]->mWeights[weightID].mWeight; 
 
             // Select the 4 largest weights via an insertion sort
-            for(int slotID=0; slotID < 4; slotID++)
+            for(int slotID=0; slotID < 4; slotID++)				
                 if(boneWeights[VertexID][slotID] < Weight) {
                     for(int shuff=3; shuff>slotID; shuff--) {
                         boneWeights[VertexID][shuff] = boneWeights[VertexID][shuff-1];
