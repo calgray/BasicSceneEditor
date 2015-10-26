@@ -1,4 +1,5 @@
-#version 330
+#version 150
+#extension GL_EXT_gpu_shader4 : enable
 
 //max bones per mesh = 64
 //max bones per vertex = 4
@@ -8,7 +9,7 @@ in vec4 vPosition;
 in vec3 vNormal;
 in vec2 vTexCoord;
 
-in ivec4 vBoneIndices;
+in vec4 vBoneIndices;
 in vec4 vBoneWeights;   //bone weights must be p1 normalized
 
 uniform mat4 BoneTransforms[MAX_BONES];
@@ -28,10 +29,10 @@ void main()
 {
 	//p1 normalize
 	
-	mat4 Bone = vBoneWeights.x * BoneTransforms[vBoneIndices.x%12]
-              + vBoneWeights.y * BoneTransforms[vBoneIndices.y%12]
-              + vBoneWeights.z * BoneTransforms[vBoneIndices.z%12]
-              + vBoneWeights.w * BoneTransforms[vBoneIndices.w%12];
+	mat4 Bone = vBoneWeights.x * BoneTransforms[int(vBoneIndices.x)]
+              + vBoneWeights.y * BoneTransforms[int(vBoneIndices.y)]
+              + vBoneWeights.z * BoneTransforms[int(vBoneIndices.z)]
+              + vBoneWeights.w * BoneTransforms[int(vBoneIndices.w)];
 	
     //Bone = vBoneWeights.x * BoneTransforms[1] +
     //       vBoneWeights.y * BoneTransforms[1] +

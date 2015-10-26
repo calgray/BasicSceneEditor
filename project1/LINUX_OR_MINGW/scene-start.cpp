@@ -16,7 +16,7 @@ GLint windowHeight=640, windowWidth=960;
 
 
 // IDs for the GLSL program and GLSL variables.
-GLuint vPosition, vNormal, vTexCoord, vBoneWeights, vBoneIndices;
+GLuint vPosition, vNormal, vTexCoord,  vBoneIndices, vBoneWeights;
 GLuint projectionU, modelViewU, boneTransformsU;
 //--------------------------------------------
 
@@ -174,6 +174,7 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
                               << boneWeights[i][3] << " " << std::endl;
     }
 	*/
+	
     //Non interleaved attributes 
 	
     //VBO
@@ -195,6 +196,19 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*6*nVerts) );
     glEnableVertexAttribArray( vNormal );
 	
+	//Bone Indexes
+	glBindBuffer( GL_ARRAY_BUFFER, buffer[1] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(int) * 4 * mesh->mNumVertices, boneIndices, GL_STATIC_DRAW ); CheckError();
+    glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
+    glEnableVertexAttribArray( vBoneIndices ); CheckError();
+	
+    //Bones Weights
+	glBindBuffer( GL_ARRAY_BUFFER, buffer[2] );
+    glBufferData( GL_ARRAY_BUFFER, sizeof(float) * 4 * mesh->mNumVertices, boneWeights, GL_STATIC_DRAW ); CheckError();
+
+	glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
+    glEnableVertexAttribArray( vBoneWeights ); CheckError();
+	
 	//EBO/IBO
 	// Load the element index data
     GLuint elements[mesh->mNumFaces*3];
@@ -204,22 +218,13 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
         elements[i*3+2] = mesh->mFaces[i].mIndices[2];
     }
 	
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[1]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
 	
 
-	//Bone Indexes
-	glBindBuffer( GL_ARRAY_BUFFER, buffer[2] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(int) * 4 * mesh->mNumVertices, boneIndices, GL_STATIC_DRAW ); CheckError();
-    glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
-    glEnableVertexAttribArray( vBoneIndices ); CheckError();
+	std::cout << "Integer : " << sizeof(int) << " Float : " << sizeof(float) << std::endl;
 	
-    //Bones Weights
-	glBindBuffer( GL_ARRAY_BUFFER, buffer[3] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(float) * 4 * mesh->mNumVertices, boneWeights, GL_STATIC_DRAW ); CheckError();
 
-	glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
-    glEnableVertexAttribArray( vBoneWeights ); CheckError();
 
     CheckError();
 }
@@ -1067,7 +1072,7 @@ int main( int argc, char* argv[] )
 	
     glutCreateWindow( "Initialising..." );
     
-    glewExperimental = true;
+    //glewExperimental = true;
     glewInit(); // With some old hardware yields GL_INVALID_ENUM, if so use glewExperimental.
     CheckError(); // This bug is explained at: http://www.opengl.org/wiki/OpenGL_Loading_Library
 
