@@ -17,7 +17,7 @@ GLint windowHeight=640, windowWidth=960;
 
 // IDs for the GLSL program and GLSL variables.
 GLuint vPosition, vNormal, vTexCoord, vBoneWeights, vBoneIndices;
-GLuint projectionU, modelViewU;
+GLuint projectionU, modelViewU, boneTransformsU;
 //--------------------------------------------
 
 // Camera ---------------------------
@@ -162,20 +162,31 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     GLfloat boneWeights[nVerts][4];
     getBonesAffectingEachVertex(mesh, boneIndices, boneWeights);
     
-    //Non interleaved attributes
+    std::cout << "indices : " << boneIndices[0][0] << " " 
+                              << boneIndices[0][1] << " "
+                              << boneIndices[0][2] << " "
+                              << boneIndices[0][3] << " " << std::endl;
+    
+    std::cout << "weights : " << boneWeights[0][0] << " " 
+                              << boneWeights[0][1] << " "
+                              << boneWeights[0][2] << " "
+                              << boneWeights[0][3] << " " << std::endl;
+                              
+    //Non interleaved attributes 
     
     // Next, we load the position and texCoord data in parts.    
-    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(float)*3*nVerts, mesh->mVertices );
+    glBufferSubData( GL_ARRAY_BUFFER, 0,                      sizeof(float)*3*nVerts, mesh->mVertices );
     glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
     
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*10*nVerts, sizeof(float)*4*nVerts, boneWeights);
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*14*nVerts, sizeof(float)*4*nVerts, boneIndices);
+    //Bones
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*9*nVerts, sizeof(float)*4*nVerts, boneWeights); CheckError();
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*13*nVerts, sizeof(float)*4*nVerts, boneIndices); CheckError();
     
     // vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
     glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
     glEnableVertexAttribArray( vPosition );
-
+    
     // vTexCoord is actually 2D - the third dimension is ignored (it's always 0.0)
     glVertexAttribPointer( vTexCoord, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*3*nVerts) );
     glEnableVertexAttribArray( vTexCoord );
@@ -183,10 +194,14 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*6*nVerts) );
     glEnableVertexAttribArray( vNormal );
     
-    glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*10*nVerts));
+    //Bones
+        glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*9*nVerts)); CheckError();
+    glEnableVertexAttribArray( vBoneIndices );
     
-    glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*14*nVerts));
+    glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*13*nVerts)); CheckError();
+    glEnableVertexAttribArray( vBoneWeights );
     
+
     
     // Load the element index data
     GLuint elements[mesh->mNumFaces*3];
@@ -335,12 +350,14 @@ static void shaderMenu(int id) {
     vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
     vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
     vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
-    vBoneWeights = glGetAttribLocation(shaderProgram, "vBoneWeights");
     vBoneIndices = glGetAttribLocation(shaderProgram, "vBoneIndices");
+    vBoneWeights = glGetAttribLocation(shaderProgram, "vBoneWeights");
+
     
     projectionU = glGetUniformLocation(shaderProgram, "Projection");
     modelViewU = glGetUniformLocation(shaderProgram, "ModelView");
     
+    boneTransformsU = glGetUniformLocation(shaderProgram, "BoneTransforms");
     
 	//glUseProgram(shaderProgram); CheckError();
 }
@@ -665,8 +682,8 @@ void init() {
 
     // Load shaders and use the resulting shader program
     programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" ); CheckError();
-	programs[1] = InitShader( "vPhong.glsl", "fPhong-Blinn.glsl" ); CheckError();
-	programs[2] = InitShader( "vPhong.glsl", "fPhong.glsl" ); CheckError();
+	programs[1] = InitShader( "vPhong-Anim.glsl", "fPhong-Blinn.glsl" ); CheckError();
+	programs[2] = InitShader( "vPhong-Anim.glsl", "fPhong.glsl" ); CheckError();
 	
     shaderMenu(2); CheckError();
     
@@ -777,10 +794,19 @@ void drawMesh(SceneObject sceneObj) {
     // surface but there could be separate types for, e.g., specularity and normals. 
     glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 ); CheckError();
 	
-    int nBones = meshes[sceneObj.meshId]->mNumBones;
+    // Activate the VAO for a mesh, loading if needed.
+    loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
+    glBindVertexArray( vaoIDs[sceneObj.meshId] );
+    
+    int nBones = meshes[sceneObj.meshId]->mNumFaces;
     if(nBones == 0) nBones = 1;
-    //mat4 boneTransforms[nBones]; //TODO: causes segmentation fault, use new or malloc
-    //calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], 0, 0, boneTransforms);
+    
+    mat4 boneTransforms[nBones];
+    calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], 0, 0, boneTransforms);
+    
+    std::cout << "bone 0: " << boneTransforms[0] << std::endl;
+    
+    glUniformMatrix4fv(boneTransformsU, nBones, GL_TRUE, (const GLfloat*)boneTransforms);
     
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
@@ -794,9 +820,7 @@ void drawMesh(SceneObject sceneObj) {
     glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
 
 
-    // Activate the VAO for a mesh, loading if needed.
-    loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
-    glBindVertexArray( vaoIDs[sceneObj.meshId] );
+
 
     glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL); CheckError();
 }
@@ -1025,7 +1049,8 @@ int main( int argc, char* argv[] )
     //glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE );
 	
     glutCreateWindow( "Initialising..." );
-
+    
+    glewExperimental = true;
     glewInit(); // With some old hardware yields GL_INVALID_ENUM, if so use glewExperimental.
     CheckError(); // This bug is explained at: http://www.opengl.org/wiki/OpenGL_Loading_Library
 
