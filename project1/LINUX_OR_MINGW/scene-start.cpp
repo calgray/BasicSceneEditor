@@ -25,7 +25,7 @@ vec3 camPosition = vec3(0, 0, 0);
 vec3 camRotation = vec3(40, 0, 0); //pitch yaw roll
 
 // Camera locked to centre scene
-static float viewDist = 1.5; // Distance from the camera to the centre of the scene
+static float viewDist = 4.5; // Distance from the camera to the centre of the scene
 
 
 mat4 projection; // Projection matrix - set in the reshape function
@@ -55,6 +55,8 @@ GLuint shaderProgram;
 const aiScene* scenes[numMeshes];
 aiMesh* meshes[numMeshes]; // For each mesh we have a pointer to the mesh to draw
 GLuint vaoIDs[numMeshes]; // and a corresponding VAO ID from glGenVertexArrays
+
+int selectObjectMenuId;
 
 const int GROUND_INDEX = 0;
 const int AMBIENT_INDEX = 1;
@@ -86,7 +88,9 @@ typedef struct {
 	
 	int type; //light type
 	
-	int animation;
+	int animation; //animation type
+	float frame; //current animation frame
+	
 	int path; //path type
 	
 	float speed; //path speed
@@ -335,11 +339,13 @@ inline void doRotate() {
 static void addObject(int id) {
 
     vec2 currPos = currMouseXYworld(camRotation.y);
+    
     sceneObjs[nObjects].loc[0] = currPos[0];
     sceneObjs[nObjects].loc[1] = 0.0;
     sceneObjs[nObjects].loc[2] = currPos[1];
     sceneObjs[nObjects].loc[3] = 1.0;
 
+    //bit dirty
     if(id!=0 && id!=55)
         sceneObjs[nObjects].scale = 0.005;
 
@@ -357,10 +363,20 @@ static void addObject(int id) {
     sceneObjs[nObjects].texScale = 2.0;
 
 	sceneObjs[nObjects].animation = 0;
+    sceneObjs[nObjects].frame = 0.0f;
+    
 	sceneObjs[nObjects].path = 0;
-	
+	sceneObjs[nObjects].speed = 1.0f;
+    
     toolObj = currObject = nObjects++;
     setToolCallbacks(adjustLocXZ, camRotZ(), adjustScaleY, mat2(0.05, 0, 0, 10.0) );
+    
+    
+    char name[32];
+    sprintf(name, "Object %i", nObjects);
+    glutSetMenu(selectObjectMenuId);
+    glutAddMenuEntry(name, nObjects);
+    
     glutPostRedisplay();
 }
 
@@ -390,6 +406,13 @@ static void shaderMenu(int id) {
 static void addObjectMenu(int id) {
     deactivateTool();
     addObject(id);
+}
+
+static void selectObjectMenu(int id) {
+  if(id <= nObjects) {
+    toolObj = id;
+    setToolCallbacks(adjustLocXZ, camRotZ(), adjustScaleY, mat2(0.05, 0, 0, 10.0) );
+  }
 }
 
 static void objectMenu(int id) {
@@ -609,6 +632,10 @@ static void makeMenu() {
 	char shaderMenuEntries[3][128] = { "blinn-gouruad", "blinn-phong", "phong" };
 	int shaderMenuId = createArrayMenu(3, shaderMenuEntries, shaderMenu);
 	
+    selectObjectMenuId = glutCreateMenu(selectObjectMenu);
+    glutAddMenuEntry("Object 0", 0);
+    glutAddMenuEntry("Object 1", 1);
+    
     int addObjectMenuId = createArrayMenu(numMeshes, objectMenuEntries, addObjectMenu);
 
     int materialMenuId = glutCreateMenu(materialMenu);
@@ -630,6 +657,8 @@ static void makeMenu() {
 	glutAddMenuEntry("3", 2);
 	
 	int objectMenuId = glutCreateMenu(objectMenu);
+    glutAddSubMenu("Add Object", addObjectMenuId);
+    glutAddSubMenu("Select Object", selectObjectMenuId);
 	glutAddMenuEntry("Position/Scale", 41);
     glutAddMenuEntry("Rotation/Texture Scale", 55);
 	glutAddSubMenu("Material", materialMenuId);
@@ -674,7 +703,6 @@ static void makeMenu() {
     glutCreateMenu(mainmenu);
     glutAddMenuEntry("Rotate/Move Camera",50);
 	glutAddMenuEntry("Rotate/Pan Camera", 51);
-    glutAddSubMenu("Add object", addObjectMenuId);
 	glutAddSubMenu("Object", objectMenuId);
 	glutAddSubMenu("Shader", shaderMenuId);
     glutAddSubMenu("Ground Texture",groundMenuId);
@@ -794,8 +822,33 @@ void init() {
 	sceneObjs[LIGHT3_INDEX].theta = 0.2f;
 	sceneObjs[LIGHT3_INDEX].falloff = 0.5f;
 
+    
     addObject(rand() % numMeshes); // A test mesh
-
+    
+    addObject(56);
+    sceneObjs[currObject].loc = vec4(3, 0, -2, 1);
+    sceneObjs[currObject].path = 1;
+    sceneObjs[currObject].turn = 30;
+    sceneObjs[currObject].speed = 1;
+    
+    addObject(56);
+    sceneObjs[currObject].loc = vec4(-2, 0, 3, 1);
+    sceneObjs[currObject].path = 1;
+    sceneObjs[currObject].turn = -40;
+    sceneObjs[currObject].speed = 3;
+    
+    addObject(56);
+    sceneObjs[currObject].loc = vec4(1, 0, 1, 1);
+    sceneObjs[currObject].path = 1;
+    sceneObjs[currObject].turn = 25;
+    sceneObjs[currObject].speed = 2;
+    
+    addObject(56);
+    sceneObjs[currObject].loc = vec4(4, 0, 3, 1);
+    sceneObjs[currObject].path = 1;
+    sceneObjs[currObject].turn = -40;
+    sceneObjs[currObject].speed = 3;
+    
     // We need to enable the depth test to discard fragments that
     // are behind previously drawn fragments for the same pixel.
     glEnable( GL_DEPTH_TEST );
@@ -819,7 +872,7 @@ void update()
 		if(sceneObjs[i].path == 1) {
 			
           sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
-          sceneObjs[i].angles.y += deltaTime * sceneObjs[i].turn;
+          sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * sceneObjs[i].turn;
           
           //float angle = sceneObjs[i].speed * totalTime;
 			//float dist = sceneObjs[i].distance;
@@ -842,37 +895,39 @@ void update()
 }
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
-void drawMesh(SceneObject sceneObj) {
+void drawMesh(SceneObject* sceneObj) {
   
     // Activate a texture, loading if needed.
-    loadTextureIfNotAlreadyLoaded(sceneObj.texId); CheckError();
+    loadTextureIfNotAlreadyLoaded(sceneObj->texId); CheckError();
     glActiveTexture(GL_TEXTURE0 ); CheckError();
-    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj.texId]); CheckError();
+    glBindTexture(GL_TEXTURE_2D, textureIDs[sceneObj->texId]); CheckError();
 
     // Texture 0 is the only texture type in this program, and is for the rgb colour of the
     // surface but there could be separate types for, e.g., specularity and normals. 
     glUniform1i( glGetUniformLocation(shaderProgram, "texture"), 0 ); CheckError();
 	
     // Activate the VAO for a mesh, loading if needed.
-    loadMeshIfNotAlreadyLoaded(sceneObj.meshId);
-    glBindVertexArray( vaoIDs[sceneObj.meshId] );
+    loadMeshIfNotAlreadyLoaded(sceneObj->meshId);
+    glBindVertexArray( vaoIDs[sceneObj->meshId] );
     
-    int nBones = meshes[sceneObj.meshId]->mNumBones;
+    int nBones = meshes[sceneObj->meshId]->mNumBones;
     if(nBones == 0) nBones = 1;
     
     mat4 boneTransforms[64];
 	//load an identity matrix
 	glUniformMatrix4fv(boneTransformsU, 64, GL_TRUE, (const GLfloat*)boneTransforms);
 	
-	if(scenes[sceneObj.meshId]->HasAnimations())
+	if(scenes[sceneObj->meshId]->HasAnimations())
 	{
-		float duration = scenes[sceneObj.meshId]->mAnimations[sceneObj.animation]->mDuration;
-		float framerate = scenes[sceneObj.meshId]->mAnimations[sceneObj.animation]->mTicksPerSecond;
-		float animtime = fmod(totalTime * framerate, duration);
-		calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], sceneObj.animation, animtime, boneTransforms);
+		float duration = scenes[sceneObj->meshId]->mAnimations[sceneObj->animation]->mDuration;
+		float framerate = scenes[sceneObj->meshId]->mAnimations[sceneObj->animation]->mTicksPerSecond;
+        
+        sceneObj->frame += deltaTime * sceneObj->speed * framerate;
+		sceneObj->frame = fmod(sceneObj->frame, duration);
+		calculateAnimPose(meshes[sceneObj->meshId], scenes[sceneObj->meshId], sceneObj->animation, sceneObj->frame, boneTransforms);
     }
 	else {
-		calculateAnimPose(meshes[sceneObj.meshId], scenes[sceneObj.meshId], 0, 0, boneTransforms);
+		calculateAnimPose(meshes[sceneObj->meshId], scenes[sceneObj->meshId], 0, 0, boneTransforms);
 	}
 	//std::cout << animtime << std::endl;
     //std::cout << "bone 0: " << boneTransforms[0] << std::endl;
@@ -886,18 +941,18 @@ void drawMesh(SceneObject sceneObj) {
     
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
-    mat4 model = Translate(sceneObj.loc) *
+    mat4 model = Translate(sceneObj->loc) *
 				
-				RotateY(sceneObj.angles.y) *
-				RotateX(sceneObj.angles.x) *
-				RotateZ(sceneObj.angles.z) *
+				RotateY(sceneObj->angles.y) *
+				RotateX(sceneObj->angles.x) *
+				RotateZ(sceneObj->angles.z) *
 				
-				Scale(sceneObj.scale);
+				Scale(sceneObj->scale);
     
     // Set the model-view matrix for the shaders
     glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);
 
-    glDrawElements(GL_TRIANGLES, meshes[sceneObj.meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL); CheckError();
+    glDrawElements(GL_TRIANGLES, meshes[sceneObj->meshId]->mNumFaces * 3, GL_UNSIGNED_INT, NULL); CheckError();
 }
 
 void display( void ) {
@@ -912,7 +967,6 @@ void display( void ) {
 	update();
 	
 	//view gets passed via modelview matrix
-	//view = RotateX(camRotation.y) * RotateY(camRotation.x) * RotateZ(camRotation.z) * Translate(-camPosition);
 	view = Translate(0.0, 0.0, -viewDist) * 
 			RotateZ(camRotation.z) *
 			RotateX(camRotation.x) * 
@@ -1024,7 +1078,7 @@ void display( void ) {
 		
         CheckError();
         
-        drawMesh(sceneObjs[i]);
+        drawMesh(&sceneObjs[i]);
     }
 
     glUseProgram(GL_NONE); CheckError();
@@ -1130,8 +1184,11 @@ int main( int argc, char* argv[] )
     glewInit(); // With some old hardware yields GL_INVALID_ENUM, if so use glewExperimental.
     CheckError(); // This bug is explained at: http://www.opengl.org/wiki/OpenGL_Loading_Library
 
+    makeMenu();
+    
     init(); 
-
+        
+    
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
     glutIdleFunc(idle);
@@ -1143,7 +1200,7 @@ int main( int argc, char* argv[] )
     glutReshapeFunc( reshape );
     glutTimerFunc(1000, timer, 1);
 
-    makeMenu();
+
 
     glutMainLoop();
     return 0;
