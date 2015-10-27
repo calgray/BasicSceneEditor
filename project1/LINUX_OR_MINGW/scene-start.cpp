@@ -154,35 +154,17 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     
     glBindVertexArray( vaoIDs[meshNumber] );
     
-    GLuint buffer[4];
-    glGenBuffers( 4, buffer );
+    GLuint buffer[2];
+    glGenBuffers( 2, buffer );
     
 	int nVerts = mesh->mNumVertices;
     //Get Bones indices and weights
     GLint boneIndices[nVerts][4];	
     GLfloat boneWeights[nVerts][4];
-	for(int i = 0; i < nVerts; i++) for(int j = 0; j < 4; j++) {
-		boneIndices[i][j] = 0;
-		boneWeights[i][j] = 0.0f;
-	}
 	
     getBonesAffectingEachVertex(mesh, boneIndices, boneWeights);
-
-	/*
-	for(int i = 0; i < nVerts; i++) {
-	std::cout << "indices : " << boneIndices[i][0] << " " 
-                              << boneIndices[i][1] << " "
-                              << boneIndices[i][2] << " "
-                              << boneIndices[i][3] << " " << std::endl;
-							  
-	std::cout << "weights : " << boneWeights[i][0] << " " 
-                              << boneWeights[i][1] << " "
-                              << boneWeights[i][2] << " "
-                              << boneWeights[i][3] << " " << std::endl;
-    }
-	*/
-	
-    //Non interleaved attributes 
+    
+	//Non interleaved attributes 
 	
     //VBO
     // Create and initialize a buffer object for positions and texture coordinates, initially empty.
@@ -190,13 +172,13 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glBindBuffer( GL_ARRAY_BUFFER, buffer[0] );
     
     //should copy from assimp texcoords to a vec2 array to save buffer memory...
-    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3)*mesh->mNumVertices, NULL, GL_STATIC_DRAW ); 
+    glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3+4+4)*mesh->mNumVertices, NULL, GL_STATIC_DRAW ); 
 	
     glBufferSubData( GL_ARRAY_BUFFER, 0,                      sizeof(float)*3*nVerts, mesh->mVertices );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-	//glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*9*nVerts, sizeof(float)*4*nVerts, boneIndices );
-    //glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*13*nVerts, sizeof(float)*4*nVerts, boneIndices );
+	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*9*nVerts, sizeof(float)*4*nVerts, boneIndices );
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*13*nVerts, sizeof(float)*4*nVerts, boneWeights );
     
     
 	// vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
@@ -207,26 +189,11 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glEnableVertexAttribArray( vTexCoord );
     glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*6*nVerts) );
     glEnableVertexAttribArray( vNormal );
-	//glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*9*nVerts) );
-    //glEnableVertexAttribArray( vBoneIndices );
-    //glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*13*nVerts) );
-    //glEnableVertexAttribArray( vBoneWeights );
-    
-    //TODO would be better if these where together with the other vertex attributes
-    
-	//Bone Indexes
-	glBindBuffer( GL_ARRAY_BUFFER, buffer[1] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(int) * 4 * mesh->mNumVertices, boneIndices, GL_STATIC_DRAW ); CheckError();
-    glVertexAttribIPointer( vBoneIndices, 4, GL_INT, 0, BUFFER_OFFSET(0)); CheckError();
-    glEnableVertexAttribArray( vBoneIndices ); CheckError();
+	glVertexAttribIPointer( vBoneIndices, 4, GL_INT, 0, BUFFER_OFFSET(sizeof(float)*9*nVerts)); CheckError();
+    glEnableVertexAttribArray( vBoneIndices );
+    glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*13*nVerts) );
+    glEnableVertexAttribArray( vBoneWeights );
 	
-    //Bones Weights
-	glBindBuffer( GL_ARRAY_BUFFER, buffer[2] );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(float) * 4 * mesh->mNumVertices, boneWeights, GL_STATIC_DRAW ); CheckError();
-	glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
-    glEnableVertexAttribArray( vBoneWeights ); CheckError();
-	
-    
 	//EBO/IBO
 	// Load the element index data
     GLuint elements[mesh->mNumFaces*3];
@@ -236,9 +203,8 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
         elements[i*3+2] = mesh->mFaces[i].mIndices[2];
     }
 	
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[3]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
-	
 
     CheckError();
 }
@@ -373,9 +339,9 @@ static void addObject(int id) {
     
     
     char name[32];
-    sprintf(name, "Object %i", nObjects);
+    sprintf(name, "Object %i", currObject);
     glutSetMenu(selectObjectMenuId);
-    glutAddMenuEntry(name, nObjects);
+    glutAddMenuEntry(name, currObject);
     
     glutPostRedisplay();
 }
@@ -436,6 +402,8 @@ static void texMenu(int id) {
 static void animationMenu(int id) {
 	
 	//TODO maybe add in animation speed slider here too
+	
+	std::cout << "animations : " << scenes[sceneObjs[currObject].meshId]->mNumAnimations << std::endl;
 	
 	if((int)(scenes[sceneObjs[currObject].meshId]->mNumAnimations) > id)
 	{
@@ -633,10 +601,8 @@ static void makeMenu() {
 	int shaderMenuId = createArrayMenu(3, shaderMenuEntries, shaderMenu);
 	
     selectObjectMenuId = glutCreateMenu(selectObjectMenu);
-    glutAddMenuEntry("Object 0", 0);
-    glutAddMenuEntry("Object 1", 1);
     
-    int addObjectMenuId = createArrayMenu(numMeshes, objectMenuEntries, addObjectMenu);
+    int addObjectMenuId = createArrayMenu(numMeshes-1, objectMenuEntries, addObjectMenu);
 
     int materialMenuId = glutCreateMenu(materialMenu);
     glutAddMenuEntry("R/G/B/All",10);
@@ -648,8 +614,8 @@ static void makeMenu() {
 	int pathMenuId = glutCreateMenu(pathMenu);
 	glutAddMenuEntry("Turn/Speed", 10);
 	glutAddMenuEntry("Stop", 0);
-	glutAddMenuEntry("Move", 1);
-	//glutAddMenuEntry("Bounce", 2);
+	glutAddMenuEntry("Forwards and Turn", 1);
+	glutAddMenuEntry("Wonder", 2);
 	
 	int animationMenuId = glutCreateMenu(animationMenu);
 	glutAddMenuEntry("1", 0);
@@ -758,9 +724,9 @@ void init() {
     glGenTextures(numTextures, textureIDs); CheckError(); // Allocate texture objects
 
     // Load shaders and use the resulting shader program
-    programs[0] = InitShader( "vGouraud-Blinn.glsl", "fGouraud-Blinn.glsl" ); CheckError();
-	programs[1] = InitShader( "vPhong-skinned.glsl", "fPhong-Blinn.glsl" ); CheckError();
-	programs[2] = InitShader( "vPhong-skinned.glsl", "fPhong.glsl" ); CheckError();
+    programs[0] = InitShader( "vGouraud-Blinn-Skinned.glsl", "fGouraud-Blinn.glsl" ); CheckError();
+	programs[1] = InitShader( "vPhong-Skinned.glsl", "fPhong-Blinn.glsl" ); CheckError();
+	programs[2] = InitShader( "vPhong-Skinned.glsl", "fPhong.glsl" ); CheckError();
 	
     shaderMenu(2); CheckError();
     
@@ -831,22 +797,22 @@ void init() {
     sceneObjs[currObject].turn = 30;
     sceneObjs[currObject].speed = 1;
     
-    addObject(56);
+    addObject(57);
     sceneObjs[currObject].loc = vec4(-2, 0, 3, 1);
     sceneObjs[currObject].path = 1;
     sceneObjs[currObject].turn = -40;
     sceneObjs[currObject].speed = 3;
     
-    addObject(56);
+    addObject(58);
     sceneObjs[currObject].loc = vec4(1, 0, 1, 1);
     sceneObjs[currObject].path = 1;
     sceneObjs[currObject].turn = 25;
     sceneObjs[currObject].speed = 2;
     
-    addObject(56);
+    addObject(58);
     sceneObjs[currObject].loc = vec4(4, 0, 3, 1);
     sceneObjs[currObject].path = 1;
-    sceneObjs[currObject].turn = -40;
+    sceneObjs[currObject].turn = 40;
     sceneObjs[currObject].speed = 3;
     
     // We need to enable the depth test to discard fragments that
@@ -869,27 +835,21 @@ void update()
 	
 	for (int i = 0; i < nObjects; i++)
 	{
+		//forwards and turn
 		if(sceneObjs[i].path == 1) {
 			
           sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
           sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * sceneObjs[i].turn;
-          
-          //float angle = sceneObjs[i].speed * totalTime;
-			//float dist = sceneObjs[i].distance;
-			
-			//sceneObjs[i].loc = vec4(dist * -sin(angle), sceneObjs[currObject].loc.y, dist * -cos(angle), 1);
-			//sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
 		}
 		
-		/*
+		//wonder
 		if(sceneObjs[i].path == 2) {
-			float angle = sceneObjs[i].speed * totalTime;
-			float dist = sceneObjs[i].distance;
 			
-			sceneObjs[i].loc = vec4(dist * -sin(angle), 0.5f * std::abs(sin(8 * angle)), dist * -cos(angle), 1);
-			sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
+			sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
+			sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * (45 * sin(totalTime) + sceneObjs[i].turn);
+			//sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * 30 * sin(totalTime/10);
 		}
-		*/
+		
 	}
 	
 }
@@ -913,9 +873,8 @@ void drawMesh(SceneObject* sceneObj) {
     int nBones = meshes[sceneObj->meshId]->mNumBones;
     if(nBones == 0) nBones = 1;
     
-    mat4 boneTransforms[64];
+    mat4 boneTransforms[nBones];
 	//load an identity matrix
-	glUniformMatrix4fv(boneTransformsU, 64, GL_TRUE, (const GLfloat*)boneTransforms);
 	
 	if(scenes[sceneObj->meshId]->HasAnimations())
 	{
@@ -929,25 +888,16 @@ void drawMesh(SceneObject* sceneObj) {
 	else {
 		calculateAnimPose(meshes[sceneObj->meshId], scenes[sceneObj->meshId], 0, 0, boneTransforms);
 	}
-	//std::cout << animtime << std::endl;
-    //std::cout << "bone 0: " << boneTransforms[0] << std::endl;
-
-	
-	//for(int i = 0; i < nBones; i++) {
-	//	boneTransforms[i] = mat4();
-	//}
 	
     glUniformMatrix4fv(boneTransformsU, nBones, GL_TRUE, (const GLfloat*)boneTransforms);
     
     // Calculate the model matrix - this should combine translation, rotation and scaling based on what's
     // in the sceneObj structure (see near the top of the program).
     mat4 model = Translate(sceneObj->loc) *
-				
-				RotateY(sceneObj->angles.y) *
-				RotateX(sceneObj->angles.x) *
-				RotateZ(sceneObj->angles.z) *
-				
-				Scale(sceneObj->scale);
+				 RotateY(sceneObj->angles.y) *
+				 RotateX(sceneObj->angles.x) *
+				 RotateZ(sceneObj->angles.z) *	
+				 Scale(sceneObj->scale);
     
     // Set the model-view matrix for the shaders
     glUniformMatrix4fv( modelViewU, 1, GL_TRUE, view * model);

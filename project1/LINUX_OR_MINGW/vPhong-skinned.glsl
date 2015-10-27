@@ -26,8 +26,6 @@ uniform float texScale;
 
 void main()
 {
-	//p1 normalize
-	
     mat4 Bone = vBoneWeights.x * BoneTransforms[vBoneIDs.x]
               + vBoneWeights.y * BoneTransforms[vBoneIDs.y]
               + vBoneWeights.z * BoneTransforms[vBoneIDs.z]
