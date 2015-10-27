@@ -88,8 +88,9 @@ typedef struct {
 	
 	int animation;
 	int path; //path type
+	
 	float speed; //path speed
-	float turn;
+	float turn; //turnspeed
 	
     int meshId;
     int texId;
@@ -183,12 +184,17 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     // Create and initialize a buffer object for positions and texture coordinates, initially empty.
     // mesh->mTextureCoords[0] has space for up to 3 dimensions, but we only need 2.
     glBindBuffer( GL_ARRAY_BUFFER, buffer[0] );
+    
+    //should copy from assimp texcoords to a vec2 array to save buffer memory...
     glBufferData( GL_ARRAY_BUFFER, sizeof(float)*(3+3+3)*mesh->mNumVertices, NULL, GL_STATIC_DRAW ); 
 	
     glBufferSubData( GL_ARRAY_BUFFER, 0,                      sizeof(float)*3*nVerts, mesh->mVertices );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*3*nVerts, sizeof(float)*3*nVerts, mesh->mTextureCoords[0] );
 	glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*6*nVerts, sizeof(float)*3*nVerts, mesh->mNormals);
-	
+	//glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*9*nVerts, sizeof(float)*4*nVerts, boneIndices );
+    //glBufferSubData( GL_ARRAY_BUFFER, sizeof(float)*13*nVerts, sizeof(float)*4*nVerts, boneIndices );
+    
+    
 	// vPosition it actually 4D - the conversion sets the fourth dimension (i.e. w) to 1.0                 
     glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0) );
     glEnableVertexAttribArray( vPosition );
@@ -197,20 +203,26 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glEnableVertexAttribArray( vTexCoord );
     glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*6*nVerts) );
     glEnableVertexAttribArray( vNormal );
-	
+	//glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*9*nVerts) );
+    //glEnableVertexAttribArray( vBoneIndices );
+    //glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(float)*13*nVerts) );
+    //glEnableVertexAttribArray( vBoneWeights );
+    
+    //TODO would be better if these where together with the other vertex attributes
+    
 	//Bone Indexes
 	glBindBuffer( GL_ARRAY_BUFFER, buffer[1] );
     glBufferData( GL_ARRAY_BUFFER, sizeof(int) * 4 * mesh->mNumVertices, boneIndices, GL_STATIC_DRAW ); CheckError();
-    glVertexAttribPointer( vBoneIndices, 4, GL_INT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
+    glVertexAttribIPointer( vBoneIndices, 4, GL_INT, 0, BUFFER_OFFSET(0)); CheckError();
     glEnableVertexAttribArray( vBoneIndices ); CheckError();
 	
     //Bones Weights
 	glBindBuffer( GL_ARRAY_BUFFER, buffer[2] );
     glBufferData( GL_ARRAY_BUFFER, sizeof(float) * 4 * mesh->mNumVertices, boneWeights, GL_STATIC_DRAW ); CheckError();
-
 	glVertexAttribPointer( vBoneWeights, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0)); CheckError();
     glEnableVertexAttribArray( vBoneWeights ); CheckError();
 	
+    
 	//EBO/IBO
 	// Load the element index data
     GLuint elements[mesh->mNumFaces*3];
@@ -223,10 +235,6 @@ void loadMeshIfNotAlreadyLoaded(int meshNumber) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * mesh->mNumFaces * 3, elements, GL_STATIC_DRAW);
 	
-
-	std::cout << "Integer : " << sizeof(int) << " Float : " << sizeof(float) << std::endl;
-	
-
 
     CheckError();
 }
@@ -303,9 +311,9 @@ static void adjustAngleZTexscale(vec2 az_ts) {
     sceneObjs[toolObj].texScale  += az_ts[1];
 }
 
-static void adjustSpeedTurn(vec2 st) {
-	sceneObjs[toolObj].speed 	+= st[0];
-    sceneObjs[toolObj].turn 	+= st[1];
+static void adjustTurnSpeed(vec2 ts) {
+	sceneObjs[toolObj].turn 	+= ts[0];
+    sceneObjs[toolObj].speed 	+= ts[1];
 }
 
 static void adjustPhiTheta(vec2 pt) {
@@ -367,7 +375,7 @@ static void shaderMenu(int id) {
     vPosition = glGetAttribLocation( shaderProgram, "vPosition" );
     vNormal = glGetAttribLocation( shaderProgram, "vNormal" );
     vTexCoord = glGetAttribLocation( shaderProgram, "vTexCoord" );
-    vBoneIndices = glGetAttribLocation(shaderProgram, "vBoneIndices");
+    vBoneIndices = glGetAttribLocation(shaderProgram, "vBoneIDs");
     vBoneWeights = glGetAttribLocation(shaderProgram, "vBoneWeights");
 
     
@@ -414,14 +422,16 @@ static void animationMenu(int id) {
 
 static void pathMenu(int id) {
 	deactivateTool();
+    
 	if(id < 10) {
 		sceneObjs[currObject].path = id;
 		sceneObjs[currObject].speed = 1.0f;
-		sceneObjs[currObject].turn = 0.0f;
+		sceneObjs[currObject].turn = 45.0f;
+        setToolCallbacks(adjustTurnSpeed, mat2(-180, 0, 0, 1), adjustTurnSpeed, mat2(-90, 0, 0, 1));
 	}
 	if(id == 10) {
 		toolObj = currObject;
-		setToolCallbacks(adjustSpeedTurn, mat2(1, 0, 0, 1), adjustSpeedTurn, mat2(1, 0, 0, 0.1));
+		setToolCallbacks(adjustTurnSpeed, mat2(-180, 0, 0, 1), adjustTurnSpeed, mat2(-90, 0, 0, 1));
 	}
 }
 
@@ -609,10 +619,10 @@ static void makeMenu() {
     int groundMenuId = createArrayMenu(numTextures, textureMenuEntries, groundMenu);
 	
 	int pathMenuId = glutCreateMenu(pathMenu);
-	glutAddMenuEntry("Speed/Distance", 10);
+	glutAddMenuEntry("Turn/Speed", 10);
 	glutAddMenuEntry("Stop", 0);
-	glutAddMenuEntry("Revolve", 1);
-	glutAddMenuEntry("Bounce", 2);
+	glutAddMenuEntry("Move", 1);
+	//glutAddMenuEntry("Bounce", 2);
 	
 	int animationMenuId = glutCreateMenu(animationMenu);
 	glutAddMenuEntry("1", 0);
@@ -801,18 +811,24 @@ void init() {
 void update()
 {
 	
-	/*
-	TODO: redo this using deltaTime and turn
+	
+	//TODO: redo this using deltaTime and turn
 	
 	for (int i = 0; i < nObjects; i++)
 	{
 		if(sceneObjs[i].path == 1) {
-			float angle = sceneObjs[i].speed * totalTime;
-			float dist = sceneObjs[i].distance;
 			
-			sceneObjs[i].loc = vec4(dist * -sin(angle), sceneObjs[currObject].loc.y, dist * -cos(angle), 1);
-			sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
+          sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
+          sceneObjs[i].angles.y += deltaTime * sceneObjs[i].turn;
+          
+          //float angle = sceneObjs[i].speed * totalTime;
+			//float dist = sceneObjs[i].distance;
+			
+			//sceneObjs[i].loc = vec4(dist * -sin(angle), sceneObjs[currObject].loc.y, dist * -cos(angle), 1);
+			//sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
 		}
+		
+		/*
 		if(sceneObjs[i].path == 2) {
 			float angle = sceneObjs[i].speed * totalTime;
 			float dist = sceneObjs[i].distance;
@@ -820,8 +836,9 @@ void update()
 			sceneObjs[i].loc = vec4(dist * -sin(angle), 0.5f * std::abs(sin(8 * angle)), dist * -cos(angle), 1);
 			sceneObjs[i].angles = vec3(0, angle / DegreesToRadians, 0);
 		}
+		*/
 	}
-	*/
+	
 }
 
 //-----------------Draw/Display Callbacks---------------------------------------------------------
