@@ -836,9 +836,6 @@ void init() {
 void update()
 {
 	
-	
-	//TODO: redo this using deltaTime and turn
-	
 	for (int i = 0; i < nObjects; i++)
 	{
 		//forwards and turn
