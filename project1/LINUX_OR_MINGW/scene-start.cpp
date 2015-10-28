@@ -1124,7 +1124,7 @@ int main( int argc, char* argv[] )
     glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
     glutInitWindowSize( windowWidth, windowHeight );
 
-    glutInitContextVersion( 3, 2);
+    glutInitContextVersion( 3, 1);
     glutInitContextProfile( GLUT_CORE_PROFILE );
     glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE );
 	
