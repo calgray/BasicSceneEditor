@@ -93,7 +93,7 @@ typedef struct {
 	
 	int path; //path type
 	
-	float speed; //path speed
+	float speed; //path/animation speed
 	float turn; //turnspeed
 	
     int meshId;
@@ -377,6 +377,7 @@ static void addObjectMenu(int id) {
 static void selectObjectMenu(int id) {
   if(id <= nObjects) {
     toolObj = id;
+	currObject = id;
     setToolCallbacks(adjustLocXZ, camRotZ(), adjustScaleY, mat2(0.05, 0, 0, 10.0) );
   }
 }
@@ -399,10 +400,9 @@ static void texMenu(int id) {
     }
 }
 
+
+/*
 static void animationMenu(int id) {
-	
-	//TODO maybe add in animation speed slider here too
-	
 	std::cout << "animations : " << scenes[sceneObjs[currObject].meshId]->mNumAnimations << std::endl;
 	
 	if((int)(scenes[sceneObjs[currObject].meshId]->mNumAnimations) > id)
@@ -410,6 +410,7 @@ static void animationMenu(int id) {
 		sceneObjs[currObject].animation = id;
 	}
 }
+*/
 
 static void pathMenu(int id) {
 	deactivateTool();
@@ -617,10 +618,9 @@ static void makeMenu() {
 	glutAddMenuEntry("Forwards and Turn", 1);
 	glutAddMenuEntry("Wonder", 2);
 	
-	int animationMenuId = glutCreateMenu(animationMenu);
-	glutAddMenuEntry("1", 0);
-	glutAddMenuEntry("2", 1);
-	glutAddMenuEntry("3", 2);
+	//int animationMenuId = glutCreateMenu(animationMenu);
+	//glutAddMenuEntry("1", 0);
+	//glutAddMenuEntry("2", 1);
 	
 	int objectMenuId = glutCreateMenu(objectMenu);
     glutAddSubMenu("Add Object", addObjectMenuId);
@@ -630,7 +630,7 @@ static void makeMenu() {
 	glutAddSubMenu("Material", materialMenuId);
 	glutAddSubMenu("Texture", texMenuId);
 	glutAddSubMenu("Path", pathMenuId);
-	glutAddSubMenu("Animation", animationMenuId);
+	//glutAddSubMenu("Animation", animationMenuId);
 	
 	int lightTypeMenuId1 = glutCreateMenu(lightTypeMenu);
 	glutAddMenuEntry("Directional", 10);
@@ -793,28 +793,34 @@ void init() {
     
     addObject(56);
     sceneObjs[currObject].loc = vec4(3, 0, -2, 1);
-    sceneObjs[currObject].path = 1;
+    sceneObjs[currObject].path = 2;
     sceneObjs[currObject].turn = 30;
     sceneObjs[currObject].speed = 1;
     
     addObject(57);
     sceneObjs[currObject].loc = vec4(-2, 0, 3, 1);
     sceneObjs[currObject].path = 1;
-    sceneObjs[currObject].turn = -40;
+    sceneObjs[currObject].turn = -41;
     sceneObjs[currObject].speed = 3;
     
     addObject(58);
     sceneObjs[currObject].loc = vec4(1, 0, 1, 1);
-    sceneObjs[currObject].path = 1;
-    sceneObjs[currObject].turn = 25;
+    sceneObjs[currObject].path = 2;
+    sceneObjs[currObject].turn = 40;
     sceneObjs[currObject].speed = 2;
     
     addObject(58);
     sceneObjs[currObject].loc = vec4(4, 0, 3, 1);
     sceneObjs[currObject].path = 1;
-    sceneObjs[currObject].turn = 40;
+    sceneObjs[currObject].turn = 42;
     sceneObjs[currObject].speed = 3;
     
+	addObject(59);
+    sceneObjs[currObject].loc = vec4(-4, 0, -3, 1);
+    sceneObjs[currObject].path = 0;
+    sceneObjs[currObject].turn = -38;
+    sceneObjs[currObject].speed = 1;
+	
     // We need to enable the depth test to discard fragments that
     // are behind previously drawn fragments for the same pixel.
     glEnable( GL_DEPTH_TEST );
@@ -838,14 +844,14 @@ void update()
 		//forwards and turn
 		if(sceneObjs[i].path == 1) {
 			
-          sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
+          sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec4(0, 0, -1, 0);
           sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * sceneObjs[i].turn;
 		}
 		
 		//wonder
 		if(sceneObjs[i].path == 2) {
 			
-			sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec3(0, 0, -1);
+			sceneObjs[i].loc += deltaTime * sceneObjs[i].speed * RotateY(sceneObjs[i].angles.y) * vec4(0, 0, -1, 0);
 			sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * (45 * sin(totalTime) + sceneObjs[i].turn);
 			//sceneObjs[i].angles.y += deltaTime * sceneObjs[i].speed * 30 * sin(totalTime/10);
 		}
@@ -1124,9 +1130,9 @@ int main( int argc, char* argv[] )
     glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH );
     glutInitWindowSize( windowWidth, windowHeight );
 
-    glutInitContextVersion( 3, 1);
-    glutInitContextProfile( GLUT_CORE_PROFILE );
-    glutInitContextProfile( GLUT_COMPATIBILITY_PROFILE );
+    glutInitContextVersion(3, 1);
+    glutInitContextProfile(GLUT_CORE_PROFILE);
+    glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
 	
     glutCreateWindow( "Initialising..." );
     
